@@ -201,7 +201,7 @@ class TestAPIOpenFinder:
         assert response.status_code == 200
         payload = response.get_json()
         assert payload["success"] is False
-        assert "No path provided" in payload["error"]
+        assert "No path specified" in payload["error"]
 
     def test_api_open_finder_non_string_path(self, client):
         """Test open finder endpoint with non-string path"""
@@ -267,7 +267,7 @@ class TestAPIBackup:
         assert response.status_code == 200
         payload = response.get_json()
         assert payload["success"] is False
-        assert "No path provided" in payload["error"]
+        assert "No path specified" in payload["error"]
 
     def test_api_backup_unsafe_path(self, client):
         """Test backup endpoint with unsafe path"""
@@ -307,7 +307,7 @@ class TestWebInterface:
         response = client.get("/")
         assert response.status_code == 200
         assert b"macOS Cleaner" in response.data
-        assert b"Web-based System Cleaning Interface" in response.data
+        assert b"Analyze System" in response.data
 
     def test_index_page_uses_template(self, client):
         """Test index page uses proper template"""

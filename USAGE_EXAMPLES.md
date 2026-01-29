@@ -2,149 +2,65 @@
 
 ## 📊 Disk Analysis Tool
 
-The macOS Cleaner provides comprehensive disk usage analysis and insights for macOS systems:
+The macOS Cleaner provides a safe, comprehensive environment for macOs storage analysis:
 
 ### Launch Options
 ```bash
-# Quick launcher (recommended)
-./run_cleaner.sh
-# Choose option 1 for Web Interface
-
-# Direct launch
+# Recommended: Web Interface
 mac-cleaner web
+
+# Desktop GUI
+mac-cleaner gui
+
+# Analysis only (CLI)
+mac-cleaner analyze
 ```
 
-### Key Features
+## 🚀 Basic Usage Scenarios
 
-#### 1. **Disk Analysis**
-- Comprehensive system scan for space usage
-- Large file identification
-- Cache and temporary file analysis
-- Safety recommendations for each category
-
-#### 2. **Web Interface**
-- Modern browser-based interface
-- Real-time analysis progress
-- Detailed space breakdown
-- Export capabilities
-
-#### 3. **Command Line Interface**
-- Scriptable analysis operations
-- JSON output for automation
-- Plugin-based extensible architecture
-
-## 🚀 Basic Usage Examples
-
-### Quick System Analysis
+### Scenario 1: Identify Large Space Consumers
 ```bash
-# Get system information
+# Get a quick summary of disk usage
 mac-cleaner info
 
-# Analyze disk usage
+# Run a full system analysis
 mac-cleaner analyze
-
-# List available plugins
-mac-cleaner plugins
 ```
 
-### Advanced Analysis
+### Scenario 2: Deep Dive into Application Caches
 ```bash
-# Analyze specific category
-mac-cleaner clean --dry-run --category cache
-
-# Get JSON output for scripting
-mac-cleaner analyze --json
-
-# Use specific plugin
-mac-cleaner clean --plugin "Browser Cache Cleaner"
+# Use the focused cache analysis plugin
+mac-cleaner analyze --plugin "System Cache Cleaner"
 ```
 
-### Backup Management
+### Scenario 3: Investigating Large Files
 ```bash
-# Create backup before analysis
-mac-cleaner backup --path "~/Downloads"
-
-# List available backups
-mac-cleaner restore --list-backups
-
-# Restore from backup
-mac-cleaner restore --restore backup_20240129_120000
+# The analysis report automatically highlights files over 100MB
+# You can see these in the 'Large Files' tab of the Web UI
 ```
 
-## 📈 Real-World Scenarios
+## 🌐 Web Dashboard (Enhanced)
 
-### Scenario 1: Low Disk Space Investigation
+The new professional web interface offers:
+
+1.  **Sidebar Navigation**: Quickly switch between Recommendations, Folder Analysis, and Large Files.
+2.  **Live Progress**: Real-time feedback during deep scans.
+3.  **Finder Integration**: Click the "Show" button next to any path to instantly reveal it in macOS Finder.
+4.  **Professional Modals**: Native-style alerts for better error handling and confirmations.
+5.  **Shimmer Visuals**: Modern loading states for a premium feel.
+
+### Launching the Web UI
 ```bash
-# Quick overview
-mac-cleaner info
-
-# Detailed analysis
-mac-cleaner analyze
-
-# Focus on largest space consumers
-mac-cleaner clean --dry-run --category cache
+mac-cleaner web --port 5000
 ```
+Open [http://localhost:5000](http://localhost:5000) in your browser.
 
-### Scenario 2: Automated Monitoring
-```bash
-# Script for daily monitoring
-#!/bin/bash
-mac-cleaner analyze --json > daily_analysis.json
-# Process JSON data for alerts/reports
-```
+## 🛡️ Safety & Security
 
-### Scenario 3: Development Environment Cleanup
-```bash
-# Check development-related space usage
-mac-cleaner clean --dry-run --plugin "Xcode Cleaner"
-mac-cleaner clean --dry-run --plugin "Docker Cleaner"
-```
-
-## 🔧 Integration Examples
-
-### Python Integration
-```python
-from mac_cleaner.space_analyzer import SpaceAnalyzer
-
-# Create analyzer instance
-analyzer = SpaceAnalyzer()
-
-# Generate report
-report = analyzer.generate_report()
-
-# Print results
-analyzer.print_report(report)
-```
-
-### Web API Integration
-```bash
-# Start web server
-mac-cleaner web --host 0.0.0.0 --port 8080
-
-# Access API endpoints
-curl http://localhost:8080/api/status
-curl http://localhost:8080/api/analyze
-```
-
-## 💡 Pro Tips
-
-1. **Always use --dry-run first** to preview what would be analyzed
-2. **JSON output** is perfect for scripting and automation
-3. **Web interface** provides the best user experience for exploration
-4. **Plugin system** allows for custom analysis rules
-5. **Regular analysis** helps track space usage trends
-
-## 🛡️ Safety Best Practices
-
-- This tool operates in **read-only mode** for safety
-- Always review analysis results before taking any action
-- Use backup features for important directories
-- Test in non-critical directories first
-
-## 📞 Support
-
-For issues and feature requests, please refer to the project documentation.
+- **Strict Read-Only**: This tool is an analysis engine only. It will suggest what *can* be optimized but will not perform deletions.
+- **Protected Paths**: System-critical directories (like `/System`) are flagged and protected during analysis.
+- **Local Privacy**: No data ever leaves your computer.
 
 ---
 
-**Made with ❤️ for macOS users who want precise control over their storage analysis**
+**Made with ❤️ for users who value system stability and clarity**
