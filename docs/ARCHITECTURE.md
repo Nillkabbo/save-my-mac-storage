@@ -2,9 +2,11 @@
 
 ## Overview
 
-The macOS Cleaner is designed as a modular, extensible system for disk usage analysis with a focus on safety and security. The architecture follows a layered approach with clear separation of concerns.
+The macOS Cleaner is designed as a modular, extensible system for disk usage analysis with a focus on safety and security. The architecture follows a layered approach with clear separation of concerns and a modern plugin-based design.
 
-## System Architecture
+## Phase 3: Enhanced Architecture (Latest)
+
+### New Plugin-Based Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -12,29 +14,410 @@ The macOS Cleaner is designed as a modular, extensible system for disk usage ana
 ├─────────────────┬─────────────────┬─────────────────────────┤
 │   CLI Interface  │   Web Interface  │   GUI Interface          │
 │   (cli.py)       │   (web_gui.py)   │   (gui_cleaner.py)       │
+│   Enhanced       │   Enhanced       │   Enhanced               │
 └─────────────────┴─────────────────┴─────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────┐
-│                    Plugin Architecture                        │
-├─────────────────────────────────────────────────────────────┤
-│  Plugin Manager  │  Plugin Base    │  Built-in Plugins       │
-│  (interfaces.py)  │  Classes        │  (plugins.py)            │
-└─────────────────┴─────────────────┴─────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────┐
-│                    Core Services Layer                       │
+│                Enhanced Plugin Architecture                    │
 ├─────────────────┬─────────────────┬─────────────────────────┤
-│   MacCleaner     │  SpaceAnalyzer  │  SafetyManager           │
-│   (mac_cleaner)  │  (space_analyzer)│  (safety_manager.py)     │
+│  Enhanced       │  Enhanced        │  Enhanced Built-in       │
+│  Plugin Manager │  Plugin Base     │  Plugins                 │
+│  (interfaces.py)│  Classes         │  (plugins.py)            │
+│  + Registry     │  + Safety Levels  │  + Priorities            │
+│  + Discovery    │  + Config        │  + Validation            │
+└─────────────────┴─────────────────┴─────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                    Enhanced Core Layer                       │
+├─────────────────┬─────────────────┬─────────────────────────┤
+│  Enhanced        │  Configuration  │  Legacy Components       │
+│  Cleaner         │  Manager        │  (mac_cleaner.py)        │
+│  (enhanced_      │  (config_       │  (space_analyzer.py)     │
+│  cleaner.py)     │  manager.py)    │  (safety_manager.py)     │
 └─────────────────┴─────────────────┴─────────────────────────┘
                               │
 ┌─────────────────────────────────────────────────────────────┐
 │                    Security & Utilities                       │
 ├─────────────────┬─────────────────┬─────────────────────────┤
-│   Security       │  Config Manager │  File Analyzer          │
-│   (security.py)  │  (config_manager)│  (file_analyzer.py)      │
+│   Enhanced       │  Enhanced        │  File Analyzer          │
+│   Security       │  Config         │  (file_analyzer.py)      │
+│   (security.py)  │  Interfaces      │                          │
 └─────────────────┴─────────────────┴─────────────────────────┘
 ```
+
+## Enhanced Components (Phase 3)
+
+### 1. Enhanced Interface Pattern
+
+#### New Interfaces (`interfaces.py`)
+```python
+# Enhanced enums for better type safety
+class OperationMode(Enum):
+    ANALYZE = "analyze"
+    DRY_RUN = "dry_run"
+    CLEAN = "clean"
+
+class SafetyLevel(Enum):
+    CRITICAL = "critical"      # Never clean
+    IMPORTANT = "important"    # Require confirmation
+    MODERATE = "moderate"      # Generally safe
+    SAFE = "safe"              # Safe to clean
+    VERY_SAFE = "very_safe"    # Always safe
+
+# Enhanced dataclasses for structured data
+@dataclass
+class CleaningResult:
+    path: str
+    operation: str
+    success: bool
+    size_freed: int = 0
+    safety_level: SafetyLevel = SafetyLevel.SAFE
+
+@dataclass
+class AnalysisResult:
+    path: str
+    size_bytes: int
+    file_count: int
+    safety_level: SafetyLevel
+    last_modified: Optional[str] = None
+
+# Enhanced interfaces with better abstractions
+class CleanerInterface(Protocol):
+    def analyze(self, paths: Optional[List[str]] = None) -> Dict[str, Any]
+    def clean(self, dry_run: bool = True, paths: Optional[List[str]] = None) -> Dict[str, Any]
+    def get_safety_info(self, path: str) -> SafetyLevel
+    def validate_operation(self, operation: OperationMode, paths: List[str]) -> bool
+
+class ConfigInterface(Protocol):
+    def get(self, key: str, default: Any = None) -> Any
+    def set(self, key: str, value: Any) -> None
+    def load(self, source: Union[str, Dict[str, Any]]) -> None
+    def save(self, target: Optional[str] = None) -> None
+    def validate(self) -> bool
+
+class SecurityInterface(Protocol):
+    def validate_path(self, path: str, allowed_prefixes: List[str]) -> bool
+    def sanitize_input(self, input_str: str) -> str
+    def check_privileges(self, path: str) -> bool
+    def is_protected_path(self, path: str) -> bool
+```
+
+#### Enhanced Plugin Base Class
+```python
+class CleanerPlugin(ABC):
+    """Enhanced base class for cleaner plugins"""
+    
+    def __init__(self, config: Optional[ConfigInterface] = None):
+        self.config = config
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+    
+    @property
+    def version(self) -> str:
+        return "1.0.0"
+    
+    @property
+    def author(self) -> str:
+        return "macOS Cleaner contributors"
+    
+    @property
+    def enabled(self) -> bool:
+        return True
+    
+    @property
+    def priority(self) -> int:
+        return 50  # Higher = runs first
+    
+    def get_safety_level(self, path: str) -> SafetyLevel:
+        """Enhanced safety level determination"""
+        
+    def can_handle_path(self, path: str) -> bool:
+        """Check if plugin can handle the given path"""
+        
+    def validate_paths(self, paths: List[str]) -> List[str]:
+        """Validate and filter paths"""
+```
+
+### 2. Enhanced Plugin Manager
+
+#### New Features
+```python
+class PluginManager:
+    """Enhanced manager for loading and running plugins"""
+    
+    def __init__(self, config: Optional[ConfigInterface] = None):
+        self.config = config
+        self.plugins: Dict[str, CleanerPlugin] = {}
+        self.categories: Dict[str, List[CleanerPlugin]] = {}
+        self.plugin_registry: Dict[str, Dict[str, Any]] = {}
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+    
+    # Enhanced registration with validation
+    def register_plugin(self, plugin: CleanerPlugin) -> bool:
+        """Register a plugin with validation"""
+        
+    # Plugin lifecycle management
+    def unregister_plugin(self, name: str) -> bool:
+    def enable_plugin(self, name: str) -> bool:
+    def disable_plugin(self, name: str) -> bool:
+    
+    # Enhanced discovery system
+    def discover_plugins(self, plugin_paths: Optional[List[str]] = None) -> int:
+        """Discover and load plugins from specified paths"""
+    
+    # Registry and information
+    def get_plugin_info(self, name: str) -> Optional[Dict[str, Any]]:
+    def get_all_plugin_info(self) -> Dict[str, Dict[str, Any]]:
+    
+    # Enhanced analysis and cleaning
+    def analyze_all(self, categories: Optional[List[str]] = None, 
+                   paths: Optional[List[str]] = None) -> Dict[str, Any]:
+    def clean_all(self, categories: Optional[List[str]] = None,
+                  paths: Optional[List[str]] = None, dry_run: bool = True) -> Dict[str, Any]:
+```
+
+### 3. Enhanced Configuration Management
+
+#### New Configuration System (`core/config_manager.py`)
+```python
+# Structured configuration dataclasses
+@dataclass
+class SecurityConfig:
+    require_confirmation: bool = True
+    allow_system_paths: bool = False
+    max_file_size_mb: int = 1000
+    protected_paths: List[str] = field(default_factory=lambda: [
+        "/System", "/usr/bin", "/Library/Keychains", "/etc", "/var/root"
+    ])
+
+@dataclass
+class BackupConfig:
+    enabled: bool = True
+    backup_dir: str = "~/.mac_cleaner_backup"
+    max_backup_age_days: int = 30
+    auto_cleanup: bool = True
+
+@dataclass
+class PluginConfig:
+    enabled_plugins: List[str] = field(default_factory=list)
+    disabled_plugins: List[str] = field(default_factory=list)
+    plugin_directories: List[str] = field(default_factory=lambda: [
+        "src.mac_cleaner.plugins", "mac_cleaner_plugins"
+    ])
+    auto_discover: bool = True
+
+# Enhanced configuration manager implementing ConfigInterface
+class ConfigurationManager(ConfigInterface):
+    """Enhanced configuration manager implementing ConfigInterface"""
+    
+    def __init__(self, config_file: Optional[str] = None):
+        self.config_file = config_file or self._get_default_config_file()
+        self.config = CleanerConfig()
+        self._dirty = False
+    
+    # Dot notation access
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value using dot notation"""
+        
+    def set(self, key: str, value: Any) -> None:
+        """Set configuration value using dot notation"""
+    
+    # Multiple format support (YAML, JSON)
+    def load(self, source: Union[str, Dict[str, Any]]) -> None:
+    def save(self, target: Optional[str] = None) -> None:
+    
+    # Validation and merging
+    def validate(self) -> bool:
+    def merge(self, other_config: Union['ConfigurationManager', Dict[str, Any]]) -> None:
+```
+
+### 4. Enhanced Cleaner Implementation
+
+#### New Enhanced Cleaner (`core/enhanced_cleaner.py`)
+```python
+class EnhancedCleaner(CleanerInterface):
+    """Enhanced cleaner implementation using plugin architecture"""
+    
+    def __init__(self, config: Optional[ConfigInterface] = None):
+        self.config = config or get_config()
+        self.plugin_manager = PluginManager(self.config)
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        
+        # Register built-in plugins
+        register_builtin_plugins(self.plugin_manager)
+        
+        # Discover additional plugins if enabled
+        if self.config.get('plugins.auto_discover', True):
+            self.plugin_manager.discover_plugins()
+    
+    # Enhanced analysis with recommendations
+    def analyze(self, paths: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Analyze what can be cleaned using all plugins"""
+        results = self.plugin_manager.analyze_all(paths=paths)
+        
+        # Add summary information
+        results['summary'] = {
+            'total_categories': len(results['categories']),
+            'total_plugins': results['plugins_analyzed'],
+            'safety_breakdown': self._get_safety_breakdown(results),
+            'recommendations': self._get_recommendations(results)
+        }
+        
+        return results
+    
+    # Enhanced cleaning with validation
+    def clean(self, dry_run: bool = True, paths: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Perform cleaning operation using all plugins"""
+        
+    # Safety and validation
+    def get_safety_info(self, path: str) -> SafetyLevel:
+    def validate_operation(self, operation: OperationMode, paths: List[str]) -> bool:
+    
+    # Plugin management
+    def get_plugin_info(self) -> Dict[str, Any]:
+    def get_categories(self) -> List[str]:
+    def analyze_category(self, category: str) -> Dict[str, Any]:
+    def clean_category(self, category: str, dry_run: bool = True) -> Dict[str, Any]:
+```
+
+### 5. Enhanced Built-in Plugins
+
+#### Updated Plugins with Safety Levels and Priorities
+```python
+class BrowserCacheCleaner(CleanerPlugin):
+    @property
+    def priority(self) -> int:
+        return 80  # High priority - safe and effective
+    
+    def get_safety_level(self, path: str) -> SafetyLevel:
+        return SafetyLevel.VERY_SAFE
+
+class SystemCacheCleaner(CleanerPlugin):
+    @property
+    def priority(self) -> int:
+        return 30  # Lower priority - more cautious
+    
+    def get_safety_level(self, path: str) -> SafetyLevel:
+        if path.startswith("/System/Library/Caches"):
+            return SafetyLevel.CRITICAL
+        elif path.startswith("/Library/Caches"):
+            return SafetyLevel.IMPORTANT
+        else:
+            return SafetyLevel.SAFE
+
+class DownloadsCleaner(CleanerPlugin):
+    @property
+    def priority(self) -> int:
+        return 20  # Low priority - requires manual review
+    
+    def get_safety_level(self, path: str) -> SafetyLevel:
+        return SafetyLevel.IMPORTANT  # Requires manual review
+```
+
+## Key Improvements in Phase 3
+
+### 1. **Better Type Safety**
+- Enums for operation modes and safety levels
+- Dataclasses for structured data
+- Protocol-based interfaces
+- Comprehensive type hints
+
+### 2. **Enhanced Plugin System**
+- Plugin registry with metadata
+- Plugin validation and discovery
+- Priority-based execution
+- Lifecycle management (enable/disable)
+- Configuration integration
+
+### 3. **Improved Configuration Management**
+- Structured configuration with dataclasses
+- Dot notation access
+- Multiple format support (YAML/JSON)
+- Configuration validation
+- Runtime updates
+
+### 4. **Enhanced Safety Features**
+- Granular safety levels
+- Path-specific safety determination
+- Operation validation
+- Privilege checking
+- Comprehensive error handling
+
+### 5. **Better Architecture**
+- Clear separation of concerns
+- Interface-based design
+- Dependency injection
+- Plugin-based extensibility
+- Comprehensive logging
+
+## Migration from Legacy to Enhanced Architecture
+
+### Backward Compatibility
+- Legacy components remain functional
+- Gradual migration path
+- Feature flags for new functionality
+- Deprecation warnings for old APIs
+
+### Migration Steps
+1. **Update Configuration**: Use new ConfigurationManager
+2. **Update Plugins**: Implement enhanced plugin base class
+3. **Update CLI**: Use EnhancedCleaner instead of MacCleaner
+4. **Update Tests**: Add tests for new architecture
+5. **Update Documentation**: Reflect new architecture
+
+## Testing the Enhanced Architecture
+
+### Architecture Test Script
+```bash
+python test_architecture.py
+```
+
+### Expected Output
+```
+✅ Successfully imported enhanced architecture components
+🔧 Testing Configuration Manager...
+  ✅ Config manager initialized
+  ✅ Default dry_run: True
+  ✅ Security max_file_size: 1000MB
+🔌 Testing Plugin Manager...
+  ✅ Plugin manager initialized
+  ✅ Built-in plugins registered
+  ✅ Found 7 plugins:
+    - Browser Cache Cleaner (category: cache, priority: 80)
+    - System Cache Cleaner (category: cache, priority: 30)
+    - Log File Cleaner (category: logs, priority: 40)
+    - Temporary File Cleaner (category: temp, priority: 70)
+    - Xcode Cleaner (category: development, priority: 60)
+    - Docker Cleaner (category: development, priority: 50)
+    - Downloads Cleaner (category: user, priority: 20)
+🧹 Testing Enhanced Cleaner...
+  ✅ Enhanced cleaner initialized
+  ✅ Plugin info retrieved: 7 plugins
+  ✅ Categories found: cache, logs, temp, development, user
+🔍 Testing Analysis (dry run)...
+  ✅ Analysis completed
+  ✅ Total space analyzed: 22.4 GB
+  ✅ Total files found: 283,545
+  ✅ Plugins used: 7
+  ✅ Categories analyzed: 5
+  ✅ Recommendations: 2
+🎉 All architecture tests passed!
+```
+
+## Future Enhancements
+
+### Phase 4: Advanced Features
+- Async plugin execution
+- Plugin marketplace
+- Advanced analytics
+- Machine learning integration
+
+### Phase 5: Distribution
+- PyPI package with enhanced architecture
+- Plugin distribution system
+- Enhanced documentation
+- Performance optimization
+
+This enhanced architecture provides a solid foundation for future development while maintaining backward compatibility and improving safety, extensibility, and maintainability.
 
 ## Core Components
 

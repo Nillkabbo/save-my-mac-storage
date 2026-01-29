@@ -42,14 +42,14 @@ class TestFileAnalyzer:
         (temp_dir / "test.txt").write_text("test content")
         (temp_dir / "cache.tmp").write_text("cache data")
         (temp_dir / "old.log").write_text("log content")
-        
+
         # Set different modification times
         old_time = datetime.now() - timedelta(days=60)
         (temp_dir / "old.log").touch()
-        
+
         results = analyzer.scan_directory(str(temp_dir))
         assert len(results) == 3
-        
+
         # Check that all required fields are present
         for result in results:
             assert "path" in result
@@ -64,10 +64,10 @@ class TestFileAnalyzer:
         # Create a cache file (should have low importance)
         cache_file = temp_dir / "cache.tmp"
         cache_file.write_text("cache content")
-        
+
         results = analyzer.scan_directory(str(temp_dir))
         cache_result = next(r for r in results if r["path"].endswith("cache.tmp"))
-        
+
         # Cache files should have low importance scores
         assert cache_result["importance_score"] <= 30
         assert cache_result["safety_level"] in ["safe", "very_safe"]
@@ -79,13 +79,13 @@ class TestFileAnalyzer:
         (temp_dir / "document.txt").write_text("important document")
         (temp_dir / "cache.tmp").write_text("temporary cache")
         (temp_dir / "system.log").write_text("system log")
-        
+
         results = analyzer.scan_directory(str(temp_dir))
-        
+
         # Find results by file type
         cache_result = next(r for r in results if r["path"].endswith("cache.tmp"))
         doc_result = next(r for r in results if r["path"].endswith("document.txt"))
-        
+
         # Cache should be safer to delete than documents
         assert cache_result["importance_score"] < doc_result["importance_score"]
 
@@ -96,10 +96,12 @@ class TestFileAnalyzer:
         old_cache.write_text("old cache")
         old_time = datetime.now() - timedelta(days=100)
         old_cache.touch()
-        
+
         results = analyzer.scan_directory(str(temp_dir))
-        old_cache_result = next(r for r in results if r["path"].endswith("old_cache.tmp"))
-        
+        old_cache_result = next(
+            r for r in results if r["path"].endswith("old_cache.tmp")
+        )
+
         # Old cache files should be recommended for deletion
         assert old_cache_result["recommendation"] == "delete"
         assert old_cache_result["safety_level"] in ["safe", "very_safe"]
@@ -109,12 +111,12 @@ class TestFileAnalyzer:
         # Create files with different sizes
         (temp_dir / "small.txt").write_text("x" * 100)
         (temp_dir / "large.txt").write_text("x" * 10000)
-        
+
         results = analyzer.scan_directory(str(temp_dir))
-        
+
         small_result = next(r for r in results if r["path"].endswith("small.txt"))
         large_result = next(r for r in results if r["path"].endswith("large.txt"))
-        
+
         assert small_result["size"] == 100
         assert large_result["size"] == 10000
         assert large_result["size"] > small_result["size"]
@@ -125,9 +127,9 @@ class TestFileAnalyzer:
         nested = temp_dir / "nested"
         nested.mkdir()
         (nested / "deep_file.tmp").write_text("deep content")
-        
+
         results = analyzer.scan_directory(str(temp_dir))
-        
+
         # Should find files in nested directories
         assert len(results) == 1
         assert any("deep_file.tmp" in r["path"] for r in results)
@@ -141,13 +143,13 @@ class TestFileAnalyzer:
         """Test exporting analysis results to JSON."""
         # Create test files
         (temp_dir / "test.txt").write_text("test content")
-        
+
         results = analyzer.scan_directory(str(temp_dir))
-        
+
         # Test export functionality
         json_file = temp_dir / "analysis.json"
         success = analyzer.export_analysis(results, str(json_file))
-        
+
         assert success
         assert json_file.exists()
         content = json_file.read_text()

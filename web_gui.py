@@ -28,7 +28,7 @@ if SRC_ROOT.exists():
 from mac_cleaner.mac_cleaner import MacCleaner
 from mac_cleaner.safety_manager import SafetyManager
 from mac_cleaner.space_analyzer import SpaceAnalyzer
-from mac_cleaner.security import validate_finder_path
+from mac_cleaner.security import validate_finder_path, SecurityValidator
 from mac_cleaner.categories import CATEGORY_MAP
 from mac_cleaner.config import get_allowed_finder_roots, get_allowed_backup_roots
 
@@ -130,8 +130,12 @@ def api_open_finder():
     try:
         data = request.get_json(silent=True) or {}
         path = data.get("path")
-        if not isinstance(path, str):
-            return jsonify({"success": False, "error": "Invalid path"})
+        
+        # Validate input
+        if not path or not isinstance(path, str):
+            return jsonify({"success": False, "error": "Invalid path: must be a non-empty string"})
+        
+        # Validate path against allowed roots
         allowed_roots = get_allowed_finder_roots()
         is_valid, error_message, safe_path = validate_finder_path(path, allowed_roots)
         if not is_valid:
@@ -153,8 +157,18 @@ def api_clean():
         data = request.get_json(silent=True) or {}
         dry_run = bool(data.get("dry_run", True))
         categories = data.get("categories", ["cache", "temp", "logs"])
+        
+        # Validate categories input
         if not isinstance(categories, list):
             return jsonify({"success": False, "error": "Categories must be a list"})
+        
+        # Validate each category
+        valid_categories = set(CATEGORY_MAP.keys())
+        for category in categories:
+            if not isinstance(category, str):
+                return jsonify({"success": False, "error": f"Invalid category: {category} (must be string)"})
+            if category not in valid_categories:
+                return jsonify({"success": False, "error": f"Unknown category: {category}"})
 
         if not cleaner:
             initialize_cleaner()
@@ -220,10 +234,15 @@ def api_backup():
             initialize_cleaner()
         if not safety_manager:
             return jsonify({"success": False, "error": "Backup unavailable"})
+        
         data = request.get_json(silent=True) or {}
         path = data.get("path")
-        if not isinstance(path, str):
-            return jsonify({"success": False, "error": "Invalid path"})
+        
+        # Validate input
+        if not path or not isinstance(path, str):
+            return jsonify({"success": False, "error": "Invalid path: must be a non-empty string"})
+        
+        # Validate path against allowed roots
         allowed_roots = get_allowed_backup_roots()
         is_valid, error_message, safe_path = validate_finder_path(path, allowed_roots)
         if not is_valid:

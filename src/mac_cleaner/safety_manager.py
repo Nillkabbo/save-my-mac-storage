@@ -100,9 +100,11 @@ class SafetyManager:
             "timestamp": datetime.now().isoformat(),
             "session": self.current_session,
             "size": self.get_size(original_path),
-            "checksum": self.calculate_checksum(original_path)
-            if os.path.isfile(original_path)
-            else "",
+            "checksum": (
+                self.calculate_checksum(original_path)
+                if os.path.isfile(original_path)
+                else ""
+            ),
         }
 
         manifest["backups"].append(file_info)

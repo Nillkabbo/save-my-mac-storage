@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 """
-Space Analyzer - Shows what's taking up space and what's safe to delete
-Focuses on providing actionable recommendations with exact folder locations
+Space Analyzer - Shows what's taking up space and what's safe to remove
+Provides analysis and recommendations for disk optimization.
 
 Copyright (c) 2026 macOS Cleaner contributors
 Licensed under the MIT License
@@ -142,7 +141,7 @@ class SpaceAnalyzer:
         return False
 
     def get_recommendation(self, name: str, path: Path, size: int) -> str:
-        """Get specific recommendation for a directory"""
+        """Get optimization recommendation for a directory"""
         if "Caches" in str(path):
             return "Safe to delete - these are temporary cache files"
         if "Logs" in str(path):
@@ -292,22 +291,116 @@ class SpaceAnalyzer:
 
         return cache_analysis
 
+    def get_disk_usage(self) -> Dict:
+        """Get accurate disk usage, prioritizing APFS Data volume over snapshots"""
+        
+        # First try to get APFS Data volume info (most accurate)
+        data_volume_paths = [
+            "/System/Volumes/Data",  # Standard APFS Data volume location
+            "/Volumes/Data",         # Alternative location
+        ]
+        
+        for data_path in data_volume_paths:
+            try:
+                if os.path.exists(data_path):
+                    disk = psutil.disk_usage(data_path)
+                    return {
+                        "total": disk.total,
+                        "used": disk.used,
+                        "free": disk.free,
+                        "usage_percent": (disk.used / disk.total) * 100,
+                        "source": f"apfs_data_{data_path.replace('/', '_')}"
+                    }
+            except (OSError, PermissionError):
+                continue
+        
+        # Try diskutil as fallback for APFS containers
+        import subprocess
+        try:
+            # Get diskutil info to find the Data volume
+            result = subprocess.run(['diskutil', 'info', '/'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                # Parse diskutil output for accurate space info
+                lines = result.stdout.split('\n')
+                for line in lines:
+                    if 'Container Total Space:' in line:
+                        # Extract size from line like "Container Total Space: 245.1 GB (245107195904 Bytes)"
+                        parts = line.split('(')
+                        if len(parts) > 1:
+                            total_bytes = int(parts[1].split(')')[0].replace(' Bytes', ''))
+                            break
+                else:
+                    total_bytes = None
+                    
+                for line in lines:
+                    if 'Container Free Space:' in line:
+                        # Extract free space from line like "Container Free Space: 14.6 GB (14573715456 Bytes)"
+                        parts = line.split('(')
+                        if len(parts) > 1:
+                            free_bytes = int(parts[1].split(')')[0].replace(' Bytes', ''))
+                            break
+                else:
+                    free_bytes = None
+                    
+                for line in lines:
+                    if 'Volume Used Space:' in line:
+                        # Extract used space from line like "Volume Used Space: 12.3 GB (12271996928 Bytes)"
+                        parts = line.split('(')
+                        if len(parts) > 1:
+                            used_bytes = int(parts[1].split(')')[0].replace(' Bytes', ''))
+                            break
+                else:
+                    used_bytes = None
+                
+                if total_bytes and free_bytes is not None and used_bytes is not None:
+                    return {
+                        "total": total_bytes,
+                        "used": used_bytes,
+                        "free": free_bytes,
+                        "usage_percent": (used_bytes / total_bytes) * 100,
+                        "source": "diskutil"
+                    }
+        except (subprocess.TimeoutExpired, subprocess.SubprocessError, ValueError, IndexError):
+            pass
+        
+        # Final fallback to psutil (may show snapshot data)
+        try:
+            disk = psutil.disk_usage("/")
+            return {
+                "total": disk.total,
+                "used": disk.used,
+                "free": disk.free,
+                "usage_percent": (disk.used / disk.total) * 100,
+                "source": "psutil_fallback"
+            }
+        except Exception as e:
+            print(f"Warning: Could not get disk usage: {e}")
+            return {
+                "total": 0,
+                "used": 0,
+                "free": 0,
+                "usage_percent": 0,
+                "source": "error"
+            }
+
     def generate_report(self) -> Dict:
         """Generate comprehensive space analysis report"""
         print("📊 Generating space analysis report...")
 
-        disk = psutil.disk_usage("/")
+        disk_info = self.get_disk_usage()
 
         report = {
             "timestamp": datetime.now().isoformat(),
             "disk_usage": {
-                "total": disk.total,
-                "total_human": self.format_bytes(disk.total),
-                "used": disk.used,
-                "used_human": self.format_bytes(disk.used),
-                "free": disk.free,
-                "free_human": self.format_bytes(disk.free),
-                "usage_percent": (disk.used / disk.total) * 100,
+                "total": disk_info["total"],
+                "total_human": self.format_bytes(disk_info["total"]),
+                "used": disk_info["used"],
+                "used_human": self.format_bytes(disk_info["used"]),
+                "free": disk_info["free"],
+                "free_human": self.format_bytes(disk_info["free"]),
+                "usage_percent": disk_info["usage_percent"],
+                "data_source": disk_info["source"],
             },
             "user_directories": self.analyze_user_directories(),
             "large_files": self.find_large_files(),
@@ -355,15 +448,14 @@ class SpaceAnalyzer:
         print(f"   Total: {disk['total_human']}")
         print(f"   Used:  {disk['used_human']} ({disk['usage_percent']:.1f}%)")
         print(f"   Free:  {disk['free_human']}")
+        print(f"   Source: {disk.get('data_source', 'Unknown')}")
 
         print("\n🎯 TOP RECOMMENDATIONS:")
         for i, rec in enumerate(report["top_recommendations"], 1):
             priority_emoji = (
                 "🔴"
                 if rec["priority"] == "high"
-                else "🟡"
-                if rec["priority"] == "medium"
-                else "🟢"
+                else "🟡" if rec["priority"] == "medium" else "🟢"
             )
             print(f"   {i}. {priority_emoji} {rec['location']}")
             print(f"      Size: {rec['size_human']}")

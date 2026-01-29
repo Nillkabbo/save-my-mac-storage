@@ -1,0 +1,251 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Run tests
+        run: |
+          pytest tests/ --cov=src/mac_cleaner --cov-report=xml -v
+
+  security:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install security tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+      - name: Run security scan
+        run: |
+          bandit -r src/
+          safety check
+
+  build:
+    runs-on: macos-latest
+    needs: [test, security]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+      - name: Build package
+        run: |
+          python -m build
+      - name: Check package
+        run: |
+          twine check dist/*
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  build-app:
+    runs-on: macos-latest
+    needs: [test, security]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[app]
+      - name: Build macOS App Bundle
+        run: |
+          python scripts/build_app.py
+      - name: Create DMG Installer
+        run: |
+          python scripts/create_dmg.py
+      - name: Upload app artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: |
+            dist/*.app
+            dist/*.dmg
+
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [test, security]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            maccleaner/macos-cleaner:latest
+            maccleaner/macos-cleaner:${{ github.ref_name }}
+          platforms: linux/amd64,linux/arm64
+
+  update-homebrew:
+    runs-on: ubuntu-latest
+    needs: [publish]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Update Homebrew formula
+        run: |
+          python scripts/update_homebrew.rb ${{ github.ref_name }}
+      - name: Commit updated formula
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add homebrew/macos-cleaner.rb
+          git commit -m "Update Homebrew formula for ${{ github.ref_name }}"
+          git push
+
+  publish:
+    runs-on: macos-latest
+    needs: [test, security, build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  create-release:
+    runs-on: macos-latest
+    needs: [publish, build-app]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download app artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-app
+          path: dist/
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.dmg
+            dist/*.tar.gz
+            dist/*.whl
+          body: |
+            ## 🎉 macOS Cleaner ${{ github.ref }}
+            
+            A comprehensive macOS system cleaning tool with async operations, advanced analytics, and smart scheduling.
+            
+            ### 🚀 What's New
+            - **Async Operations**: Concurrent file analysis and cleaning for better performance
+            - **Advanced Analytics**: Usage pattern analysis and space predictions
+            - **Smart Scheduling**: Automated cleaning with intelligent adjustments
+            - **Notification System**: Multi-channel notifications with smart filtering
+            - **Plugin Architecture**: Extensible system with built-in plugins
+            - **Enhanced Safety**: Comprehensive safety checks and backup systems
+            
+            ### 📦 Installation Options
+            
+            #### PyPI (Recommended)
+            ```bash
+            pip install macos-cleaner
+            ```
+            
+            #### Homebrew
+            ```bash
+            brew tap mac-cleaner/tap
+            brew install mac-cleaner
+            ```
+            
+            #### Docker
+            ```bash
+            docker pull maccleaner/macos-cleaner:latest
+            docker run -p 5000:5000 maccleaner/macos-cleaner
+            ```
+            
+            #### macOS App Bundle
+            Download the DMG installer from the assets below.
+            
+            ### 🔒 Security Features
+            - Read-only analysis mode by default
+            - Protected system paths detection
+            - Automatic backup creation
+            - Comprehensive input validation
+            - Safety level classification
+            
+            ### 📋 Quick Start
+            ```bash
+            # Analyze system
+            mac-cleaner analyze
+            
+            # Dry run cleaning
+            mac-cleaner clean --dry-run
+            
+            # GUI interface
+            mac-cleaner-gui
+            
+            # Web interface
+            mac-cleaner-web
+            ```
+            
+            ### 📚 Documentation
+            - [README](https://github.com/mac-cleaner/macos-cleaner/blob/main/README.md)
+            - [Usage Examples](https://github.com/mac-cleaner/macos-cleaner/blob/main/USAGE_EXAMPLES.md)
+            - [Architecture](https://github.com/mac-cleaner/macos-cleaner/blob/main/docs/ARCHITECTURE.md)
+            
+            ### ⚠️ Important
+            - Always use dry-run mode first
+            - Back up important data before cleaning
+            - Review what will be deleted before confirming
+            
+            ---
+            
+            🍎 **macOS Cleaner** - Safe, intelligent system cleaning for Mac

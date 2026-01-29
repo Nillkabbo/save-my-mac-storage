@@ -31,11 +31,12 @@ class DetailedCleanerGUI:
         self.root.geometry("1200x800")
         self.root.configure(bg="#f0f0f0")
 
-        self.analyzer = FileAnalyzer()
+        self.analyzer = FileAnalyzer(enable_db_logging=True)
         self.cleaner = MacCleaner()
         self.update_queue = queue.Queue()
         self.current_files = []
         self.selected_directory = None
+        self.current_scan_id = None
 
         self.setup_styles()
         self.create_widgets()
@@ -81,11 +82,23 @@ class DetailedCleanerGUI:
         main_frame.rowconfigure(2, weight=1)
 
         # Header
+        header_frame = ttk.Frame(main_frame)
+        header_frame.grid(row=0, column=0, pady=(0, 20))
+        header_frame.columnconfigure(0, weight=1)
+        
         ttk.Label(
-            main_frame,
+            header_frame,
             text="🍎 macOS Cleaner - Detailed Analysis",
             style="Title.TLabel",
-        ).grid(row=0, column=0, pady=(0, 20))
+        ).grid(row=0, column=0, sticky='w')
+        
+        # Analytics button
+        analytics_btn = ttk.Button(
+            header_frame,
+            text="📊 Analytics Dashboard",
+            command=self.open_analytics_dashboard
+        )
+        analytics_btn.grid(row=0, column=1, padx=(20, 0))
 
         # Directory selection
         self.create_directory_selector(main_frame)
@@ -251,9 +264,14 @@ class DetailedCleanerGUI:
         ttk.Button(
             control_frame, text="💾 Export Analysis", command=self.export_analysis
         ).grid(row=1, column=2, padx=(0, 10))
-        ttk.Button(control_frame, text="🧹 Safe Clean", command=self.safe_clean).grid(
-            row=1, column=3, padx=(0, 10)
+        self.clean_button = ttk.Button(
+            control_frame,
+            text="🧹 Review & Analyze",
+            command=self.safe_clean,
+            state="disabled",
+            style="Action.TButton",
         )
+        self.clean_button.grid(row=1, column=3, padx=(0, 10))
 
         # Progress
         self.progress = ttk.Progressbar(control_frame, mode="indeterminate")
@@ -306,7 +324,7 @@ class DetailedCleanerGUI:
             messagebox.showwarning("Warning", "Please select a directory first")
             return
 
-        self.update_status("Analyzing directory...")
+        self.update_status("🔍 Analyzing directory structure...")
         self.progress.start()
 
         thread = threading.Thread(target=self.analyze_directory, daemon=True)
@@ -315,6 +333,12 @@ class DetailedCleanerGUI:
     def analyze_directory(self):
         try:
             self.update_queue.put(("status", "Scanning files..."))
+
+            # Start scan tracking
+            self.current_scan_id = self.analyzer.start_scan(
+                scan_type="directory",
+                categories=[self.analyzer._categorize_file(self.selected_directory)]
+            )
 
             # Get directory summary
             summary = self.analyzer.get_directory_summary(self.selected_directory)
@@ -325,12 +349,16 @@ class DetailedCleanerGUI:
             )
             self.current_files = files
 
+            # Finish scan and save to database
+            if self.current_scan_id:
+                self.analyzer.finish_scan(files, errors=0)
+                self.update_queue.put(("status", f"Analysis complete - {len(files)} files found (saved to database)"))
+            else:
+                self.update_queue.put(("status", f"Analysis complete - {len(files)} files found"))
+
             # Update UI
             self.update_queue.put(("files", files))
             self.update_queue.put(("summary", summary))
-            self.update_queue.put(
-                ("status", f"Analysis complete - {len(files)} files found")
-            )
 
         except Exception as e:
             self.update_queue.put(("status", f"Analysis failed: {str(e)}"))
@@ -422,6 +450,7 @@ class DetailedCleanerGUI:
             top_files = self.analyzer.get_top_space_consumers(
                 self.selected_directory, top_n=50
             )
+            self.current_files = top_files # Update current_files for filtering/export
             self.update_queue.put(("files", top_files))
             self.update_queue.put(
                 (
@@ -534,6 +563,30 @@ class DetailedCleanerGUI:
             pass
 
         self.root.after(100, self.check_queue)
+
+    def open_analytics_dashboard(self):
+        """Open the analytics dashboard in a new window"""
+        try:
+            # Import here to avoid circular imports
+            from src.mac_cleaner.gui.analytics_gui import AnalyticsGUI
+            
+            # Create analytics window
+            analytics_window = tk.Toplevel(self.root)
+            analytics_window.title("📊 Analytics Dashboard")
+            analytics_window.geometry("1400x900")
+            
+            # Create analytics GUI
+            analytics_app = AnalyticsGUI()
+            analytics_app.root.destroy()  # Destroy the root created in AnalyticsGUI
+            
+            # Re-parent the analytics GUI to our window
+            analytics_app.root = analytics_window
+            
+            # Recreate the analytics GUI in our window
+            analytics_app.__init__()
+            
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open analytics dashboard: {e}")
 
 
 def main():

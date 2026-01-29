@@ -23,7 +23,7 @@ class MacCleaner:
     def __init__(self):
         self.system_info = self.get_system_info()
         self.cleanable_paths = self.get_cleanable_paths()
-        self.stats = {"files_deleted": 0, "space_freed": 0, "errors": []}
+        self.stats = {"files_identified": 0, "space_identified": 0, "errors": []}
         self.setup_logging()
 
     def setup_logging(self):
@@ -41,20 +41,63 @@ class MacCleaner:
         )
         self.logger = logging.getLogger(__name__)
 
+    def get_accurate_disk_usage(self) -> Dict:
+        """Get accurate disk usage, prioritizing APFS Data volume over snapshots"""
+        
+        # First try to get APFS Data volume info (most accurate)
+        data_volume_paths = [
+            "/System/Volumes/Data",  # Standard APFS Data volume location
+            "/Volumes/Data",         # Alternative location
+        ]
+        
+        for data_path in data_volume_paths:
+            try:
+                if os.path.exists(data_path):
+                    disk = psutil.disk_usage(data_path)
+                    return {
+                        "total": disk.total,
+                        "used": disk.used,
+                        "free": disk.free,
+                        "usage_percent": (disk.used / disk.total) * 100,
+                        "source": f"apfs_data_{data_path.replace('/', '_')}"
+                    }
+            except (OSError, PermissionError):
+                continue
+        
+        # Final fallback to psutil (may show snapshot data)
+        try:
+            disk = psutil.disk_usage("/")
+            return {
+                "total": disk.total,
+                "used": disk.used,
+                "free": disk.free,
+                "usage_percent": (disk.used / disk.total) * 100,
+                "source": "psutil_fallback"
+            }
+        except Exception as e:
+            print(f"Warning: Could not get disk usage: {e}")
+            return {
+                "total": 0,
+                "used": 0,
+                "free": 0,
+                "usage_percent": 0,
+                "source": "error"
+            }
+
     def get_system_info(self) -> Dict:
         """Get comprehensive system information."""
         import platform
-        
-        # Disk usage
-        disk_usage = psutil.disk_usage("/")
-        total_space = disk_usage.total
-        used_space = disk_usage.used
-        free_space = disk_usage.free
-        usage_percent = (used_space / total_space) * 100
-        
+
+        # Get accurate disk usage
+        disk_info = self.get_accurate_disk_usage()
+        total_space = disk_info["total"]
+        used_space = disk_info["used"]
+        free_space = disk_info["free"]
+        usage_percent = disk_info["usage_percent"]
+
         # Memory info
         memory = psutil.virtual_memory()
-        
+
         return {
             "platform": platform.system(),
             "macos_version": platform.mac_ver()[0],
@@ -111,12 +154,12 @@ class MacCleaner:
 
     def get_disk_usage(self) -> Dict:
         """Get disk usage information"""
-        disk = psutil.disk_usage("/")
+        disk_info = self.get_accurate_disk_usage()
         return {
-            "total_gb": disk.total / (1024**3),
-            "used_gb": disk.used / (1024**3),
-            "free_gb": disk.free / (1024**3),
-            "usage_percent": (disk.used / disk.total) * 100,
+            "total_gb": disk_info["total"] / (1024**3),
+            "used_gb": disk_info["used"] / (1024**3),
+            "free_gb": disk_info["free"] / (1024**3),
+            "usage_percent": disk_info["usage_percent"],
         }
 
     def analyze_cleanable_space(self) -> Dict[str, Dict]:
@@ -149,62 +192,77 @@ class MacCleaner:
             bytes_size /= 1024.0
         return f"{bytes_size:.2f} PB"
 
-    def clean_category(self, category: str, dry_run: bool = True, progress=None) -> Dict:
-        """Clean a specific category (READ-ONLY MODE - Analysis Only)"""
+    def analyze_category(
+        self, category: str, dry_run: bool = True, progress=None
+    ) -> Dict:
+        """Analyze a specific category for potential savings (Read-Only)"""
         self.logger.info(f"🔍 ANALYZING category: {category} (read-only mode)")
-        
+
         if not dry_run:
-            self.logger.warning("⚠️  Live cleaning is disabled - running in analysis mode only")
+            self.logger.warning(
+                "⚠️  Live cleaning is disabled - running in analysis mode only"
+            )
             dry_run = True
-        
+
         paths = self.cleanable_paths.get(category, [])
         if not paths:
-            return {"files_deleted": 0, "space_freed": 0, "space_freed_human": "0 B", "error": "Category not found"}
-        
+            return {
+                "files_identified": 0,
+                "space_identified": 0,
+                "space_identified_human": "0 B",
+                "error": "Category not found",
+            }
+
         total_files = 0
         total_size = 0
         results = []
-        
+
         for path in paths:
             if progress:
                 progress()
-            
+
             try:
                 path_obj = Path(path)
                 if not path_obj.exists():
                     continue
-                
+
                 # Only analyze, never delete
                 size = self._get_directory_size(path_obj)
-                file_count = self._count_files(path_obj)
-                
+                file_count = len([f for f in path_obj.rglob("*") if f.is_file()])
+
                 total_files += file_count
                 total_size += size
-                
-                results.append({
-                    "path": path,
-                    "size": size,
-                    "size_human": self.format_bytes(size),
-                    "files_found": file_count,
-                    "action": "analyzed_only"
-                })
-                
-                self.logger.info(f"📊 Analyzed {path}: {file_count} files, {self.format_bytes(size)}")
-                
+
+                results.append(
+                    {
+                        "path": path,
+                        "size": size,
+                        "size_human": self.format_bytes(size),
+                        "files_found": file_count,
+                        "action": "analyzed_only",
+                    }
+                )
+
+                self.logger.info(
+                    f"📊 Analyzed {path}: {file_count} files, {self.format_bytes(size)}"
+                )
+
             except Exception as e:
                 self.logger.error(f"Error analyzing {path}: {e}")
                 results.append({"path": path, "error": str(e)})
-        
+
         return {
             "category": category,
-            "files_deleted": 0,  # Never delete files
-            "space_freed": 0,   # Never free space
-            "space_freed_human": "0 B",
+            "files_identified": total_files,
+            "space_identified": total_size,
+            "space_identified_human": self.format_bytes(total_size),
             "files_analyzed": total_files,
             "space_analyzed": total_size,
             "space_analyzed_human": self.format_bytes(total_size),
             "paths_analyzed": results,
-            "mode": "read_only_analysis"
+            "mode": "read_only_analysis",
+            "files_deleted": 0,  # Backward compatibility
+            "space_freed": 0,    # Backward compatibility
         }
 
     def _get_directory_size(self, path: Path) -> int:
@@ -218,34 +276,42 @@ class MacCleaner:
                     continue
         return total_size
 
-    def clean_all(self, dry_run: bool = True) -> Dict:
-        """Clean all categories (READ-ONLY MODE - Analysis Only)"""
+    def analyze_all(self, dry_run: bool = True) -> Dict:
+        """Analyze all categories for potential savings (Read-Only)"""
         self.logger.info("🔍 ANALYZING all categories (read-only mode)")
-        
+
         if not dry_run:
-            self.logger.warning("⚠️  Live cleaning is disabled - running in analysis mode only")
+            self.logger.warning(
+                "⚠️  Live cleaning is disabled - running in analysis mode only"
+            )
             dry_run = True
-        
+
         results = {}
         total_files = 0
         total_space = 0
 
         for category in self.cleanable_paths.keys():
-            result = self.clean_category(category, dry_run)
+            result = self.analyze_category(category, dry_run)
             results[category] = result
             total_files += result.get("files_analyzed", 0)
             total_space += result.get("space_analyzed", 0)
 
         return {
             "categories": results,
-            "total_files": 0,  # Never delete files
-            "total_space": 0,   # Never free space
-            "total_space_human": "0 B",
+            "total_files": total_files,
+            "total_space": total_space,
+            "total_space_human": self.format_bytes(total_space),
             "files_analyzed": total_files,
             "space_analyzed": total_space,
             "space_analyzed_human": self.format_bytes(total_space),
-            "mode": "read_only_analysis"
+            "mode": "read_only_analysis",
+            "files_deleted": 0,  # Backward compatibility
+            "space_freed": 0,    # Backward compatibility
         }
+
+    # Backward compatibility aliases
+    clean_category = analyze_category
+    clean_all = analyze_all
 
 
 def main():
@@ -275,11 +341,11 @@ def main():
     if choice == "y":
         confirm = input("This will permanently delete files. Are you sure? (y/N): ")
         if confirm.lower().strip() == "y":
-            print("\n🧹 Cleaning...")
-            results = cleaner.clean_all(dry_run=False)
-            print("\n✅ Cleaning complete!")
-            print(f"Files deleted: {results['total_files']}")
-            print(f"Space freed: {results['total_space_human']}")
+            print("\n📊 Analyzing...")
+            results = cleaner.analyze_all(dry_run=True)
+            print("\n✅ Analysis complete!")
+            print(f"Files identified: {results['total_files']}")
+            print(f"Potential savings: {results['total_space_human']}")
 
             if cleaner.stats["errors"]:
                 print(f"\n⚠️  Errors encountered: {len(cleaner.stats['errors'])}")

@@ -1,235 +1,150 @@
 # 🍎 macOS Cleaner - Usage Examples
 
-## 📊 Detailed Analysis GUI (NEW!)
+## 📊 Disk Analysis Tool
 
-The new Detailed Analysis GUI provides precise control and visibility into your storage:
+The macOS Cleaner provides comprehensive disk usage analysis and insights for macOS systems:
 
 ### Launch Options
 ```bash
 # Quick launcher (recommended)
 ./run_cleaner.sh
-# Choose option 2 for Detailed Analysis GUI
+# Choose option 1 for Web Interface
 
 # Direct launch
-mac-cleaner detailed-gui
+mac-cleaner web
 ```
 
 ### Key Features
 
-#### 1. **Directory Selection**
-- Browse any directory on your system
-- Quick access buttons for common locations:
-  - 📁 Caches
-  - 📝 Logs  
-  - 🗑️ Trash
-  - 🌐 Browser Cache
+#### 1. **Disk Analysis**
+- Comprehensive system scan for space usage
+- Large file identification
+- Cache and temporary file analysis
+- Safety recommendations for each category
 
-#### 2. **File Analysis**
-For each file, you'll see:
-- **Exact Path**: Full file location
-- **Size**: Human-readable size (B, KB, MB, GB)
-- **Modified Date**: Last modification time
-- **Safety Level**: Critical, Important, Moderate, Safe, Very Safe
-- **Recommendation**: Keep, Review, Delete, Skip
-- **Full Path**: Complete file path for manual navigation
+#### 2. **Web Interface**
+- Modern browser-based interface
+- Real-time analysis progress
+- Detailed space breakdown
+- Export capabilities
 
-#### 3. **Safety Scoring System**
-Files are scored 0-100 based on:
-- File extension importance
-- File age (older = less important)
-- File size
-- Hidden status
-- Location (system vs user directories)
+#### 3. **Command Line Interface**
+- Scriptable analysis operations
+- JSON output for automation
+- Plugin-based extensible architecture
 
-#### 4. **Color-Coded Safety Levels**
-- 🔴 **Critical** (80-100): System files, important documents
-- 🟠 **Important** (60-79): User documents, preferences
-- 🟡 **Moderate** (40-59): Unknown importance
-- 🟢 **Safe** (20-39): Temporary files, old data
-- 🔵 **Very Safe** (0-19): Cache, temp files
+## 🚀 Basic Usage Examples
 
-#### 5. **Finder Integration**
-- **"Open in Finder"** button for selected directory
-- **Double-click** any file to open its location in Finder
-- **Right-click** context menu coming soon
-
-#### 6. **Filtering Options**
-Filter files by safety level:
-- All files
-- Very Safe only
-- Safe only  
-- Moderate only
-- Important only
-- Critical only
-
-#### 7. **Special Analysis Tools**
-- **📊 Top Space Consumers**: Shows largest files first
-- **📅 Old Files**: Files older than 30 days
-- **💾 Export Analysis**: Save detailed analysis to JSON
-
-## 🎯 Real-World Usage Scenarios
-
-### Scenario 1: Storage Almost Full
-**Problem**: Your Mac is running out of space and applications are slowing down.
-
-**Solution**:
-1. Launch Detailed Analysis GUI
-2. Select your user directory: `/Users/yourname`
-3. Click "Analyze"
-4. Filter by "Very Safe" and "Safe"
-5. Sort by size (largest first)
-6. Double-click large files to open in Finder
-7. Manually review and delete what you don't need
-
-### Scenario 2: Application Memory Issues
-**Problem**: Applications pause during work due to memory pressure.
-
-**Solution**:
-1. Click "📁 Caches" quick access button
-2. Analyze the cache directory
-3. Look for large cache files (often browser caches)
-4. Open in Finder and manually delete
-5. Repeat for "🌐 Browser Cache"
-
-### Scenario 3: Finding Large Hidden Files
-**Problem**: You suspect large hidden files are consuming space.
-
-**Solution**:
-1. Browse to root directory or user directory
-2. Analyze and look for files with high size but "Safe" rating
-3. Use "📊 Top Space Consumers" to find largest files
-4. Open in Finder to investigate
-
-### Scenario 4: Cleaning Old Downloads
-**Problem**: Downloads folder has accumulated old files.
-
-**Solution**:
-1. Browse to `/Users/yourname/Downloads`
-2. Analyze the directory
-3. Use "📅 Old Files" to find files older than 30 days
-4. Review safety ratings and recommendations
-5. Open in Finder to manually clean
-
-## 📋 File Safety Examples
-
-### ✅ Safe to Delete (Usually)
-```
-/Users/yourname/Library/Caches/com.apple.Safari/
-/Users/yourname/Library/Caches/Google/Chrome/
-/tmp/tempfile123.tmp
-/Users/yourname/.Trash/
-/Users/yourname/Downloads/old-installer.dmg
-```
-
-### ⚠️ Review Before Deleting
-```
-/Users/yourname/Documents/old-project/
-/Users/yourname/Library/Preferences/com.apple.someapp.plist
-/Users/yourname/Library/Application Support/old-app/
-```
-
-### 🚫 Do Not Delete
-```
-/System/Library/
-/Library/Keychains/
-/Users/yourname/Library/Keychains/
-/Users/yourname/Documents/current-work/
-```
-
-## 🔍 Manual Investigation Workflow
-
-### Step 1: Identify Problem Areas
+### Quick System Analysis
 ```bash
-# Check overall disk usage
-df -h
+# Get system information
+mac-cleaner info
 
-# Find large directories
-du -sh /Users/yourname/* | sort -hr | head -10
+# Analyze disk usage
+mac-cleaner analyze
+
+# List available plugins
+mac-cleaner plugins
 ```
 
-### Step 2: Use Detailed Analysis GUI
-1. Launch the GUI
-2. Select the large directory found above
-3. Analyze and filter by safety level
-4. Export analysis for record-keeping
-
-### Step 3: Manual Cleanup
-1. Use "Open in Finder" to navigate
-2. Review files manually
-3. Delete what you're comfortable removing
-4. Empty Trash when confident
-
-## 📊 Understanding File Analysis
-
-### Example File Analysis Output
-```json
-{
-  "path": "/Users/yourname/Library/Caches/com.apple.Safari/Cache.db",
-  "name": "Cache.db",
-  "size": 52428800,
-  "size_human": "50.00 MB",
-  "modified": "2023-12-01 10:30:45",
-  "safety_level": "very_safe",
-  "recommendation": "delete",
-  "importance_score": 15
-}
-```
-
-### Safety Level Determination
-- **File Extension**: `.cache`, `.tmp`, `.log` = Lower importance
-- **Location**: `/Library/Caches/`, `/tmp/` = Lower importance  
-- **Age**: Files older than 30 days = Lower importance
-- **Size**: Very small files (< 1KB) = Lower importance
-
-## 🛠️ Advanced Usage
-
-### Export Analysis for Review
+### Advanced Analysis
 ```bash
-# Analysis exported to JSON
-{
-  "files": [...],
-  "summary": {
-    "total_files": 1500,
-    "total_size": "2.5 GB",
-    "deletable_size": "1.8 GB"
-  }
-}
+# Analyze specific category
+mac-cleaner clean --dry-run --category cache
+
+# Get JSON output for scripting
+mac-cleaner analyze --json
+
+# Use specific plugin
+mac-cleaner clean --plugin "Browser Cache Cleaner"
 ```
 
-### Command Line Analysis (for scripts)
+### Backup Management
+```bash
+# Create backup before analysis
+mac-cleaner backup --path "~/Downloads"
+
+# List available backups
+mac-cleaner restore --list-backups
+
+# Restore from backup
+mac-cleaner restore --restore backup_20240129_120000
+```
+
+## 📈 Real-World Scenarios
+
+### Scenario 1: Low Disk Space Investigation
+```bash
+# Quick overview
+mac-cleaner info
+
+# Detailed analysis
+mac-cleaner analyze
+
+# Focus on largest space consumers
+mac-cleaner clean --dry-run --category cache
+```
+
+### Scenario 2: Automated Monitoring
+```bash
+# Script for daily monitoring
+#!/bin/bash
+mac-cleaner analyze --json > daily_analysis.json
+# Process JSON data for alerts/reports
+```
+
+### Scenario 3: Development Environment Cleanup
+```bash
+# Check development-related space usage
+mac-cleaner clean --dry-run --plugin "Xcode Cleaner"
+mac-cleaner clean --dry-run --plugin "Docker Cleaner"
+```
+
+## 🔧 Integration Examples
+
+### Python Integration
 ```python
-from mac_cleaner.file_analyzer import FileAnalyzer
+from mac_cleaner.space_analyzer import SpaceAnalyzer
 
-analyzer = FileAnalyzer()
-summary = analyzer.get_directory_summary('/Users/yourname/Library/Caches')
-print(f"Deletable: {analyzer.format_bytes(summary['deletable_size'])}")
+# Create analyzer instance
+analyzer = SpaceAnalyzer()
+
+# Generate report
+report = analyzer.generate_report()
+
+# Print results
+analyzer.print_report(report)
 ```
 
-## ⚡ Quick Tips
+### Web API Integration
+```bash
+# Start web server
+mac-cleaner web --host 0.0.0.0 --port 8080
 
-1. **Start with Safe Areas**: Always begin with Caches and Trash
-2. **Check File Size**: Large files with low safety scores are good candidates
-3. **Use Finder Integration**: Double-click to verify file location manually
-4. **Export Before Deleting**: Keep a record of what you plan to remove
-5. **Work in Sections**: Clean one directory at a time to avoid mistakes
+# Access API endpoints
+curl http://localhost:8080/api/status
+curl http://localhost:8080/api/analyze
+```
 
-## 🆚 Comparison with Other Cleaners
+## 💡 Pro Tips
 
-| Feature | Other Cleaners | macOS Cleaner (Detailed) |
-|---------|----------------|---------------------------|
-| File Visibility | Limited | Full paths and details |
-| User Control | Automatic | Manual decision making |
-| Safety | Basic | Advanced scoring system |
-| Finder Integration | No | Yes (double-click) |
-| Export Analysis | No | Yes (JSON export) |
-| Precise Control | No | Yes (file-by-file) |
+1. **Always use --dry-run first** to preview what would be analyzed
+2. **JSON output** is perfect for scripting and automation
+3. **Web interface** provides the best user experience for exploration
+4. **Plugin system** allows for custom analysis rules
+5. **Regular analysis** helps track space usage trends
 
-## 📞 Getting Help
+## 🛡️ Safety Best Practices
 
-If you're unsure about a file:
-1. Check its safety level and recommendation
-2. Double-click to open in Finder
-3. Search online for the filename/path
-4. When in doubt, don't delete it
+- This tool operates in **read-only mode** for safety
+- Always review analysis results before taking any action
+- Use backup features for important directories
+- Test in non-critical directories first
 
-Remember: **You are in control** - this tool provides information, but you make the decisions!
+## 📞 Support
+
+For issues and feature requests, please refer to the project documentation.
+
+---
+
+**Made with ❤️ for macOS users who want precise control over their storage analysis**

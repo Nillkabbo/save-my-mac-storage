@@ -1,0 +1,89 @@
+# Docker Compose configuration for macOS Cleaner
+# Copyright (c) 2026 macOS Cleaner contributors
+
+version: '3.8'
+
+services:
+  # Main web interface
+  maccleaner-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: maccleaner-web
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - MACCLEANER_CONFIG=/app/config/production.yaml
+      - MACCLEANER_LOG_LEVEL=INFO
+    volumes:
+      - ./config:/app/config:ro
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - /:/host:ro  # Read-only access to host filesystem for analysis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - maccleaner-network
+
+  # Redis for caching and session storage (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: maccleaner-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    networks:
+      - maccleaner-network
+
+  # PostgreSQL for analytics data (optional)
+  postgres:
+    image: postgres:15-alpine
+    container_name: maccleaner-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=maccleaner
+      - POSTGRES_USER=maccleaner
+      - POSTGRES_PASSWORD=maccleaner_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init_postgres.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
+    networks:
+      - maccleaner-network
+
+  # Nginx reverse proxy (optional)
+  nginx:
+    image: nginx:alpine
+    container_name: maccleaner-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - maccleaner-web
+    restart: unless-stopped
+    networks:
+      - maccleaner-network
+
+volumes:
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  maccleaner-network:
+    driver: bridge

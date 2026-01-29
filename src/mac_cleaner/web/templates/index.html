@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>macOS Cleaner - Web Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .info-item strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        
+        .status-running {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-completed {
+            background: #d1edff;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 15px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .space-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+            display: flex;
+        }
+        
+        .space-used {
+            background: linear-gradient(90deg, #f093fb, #f5576c);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .space-free {
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍎 macOS Cleaner</h1>
+            <p>Web-based System Cleaning Interface</p>
+        </div>
+        
+        <!-- System Information -->
+        <div class="card">
+            <h2>📊 Disk Usage</h2>
+            <div id="disk-info">
+                <p>Click "Analyze Space" to see disk usage information</p>
+            </div>
+            <div style="text-align: center; margin: 20px 0;">
+                <button class="button" onclick="startAnalysis()">🔍 Analyze Space</button>
+            </div>
+        </div>
+        
+        <!-- Analysis Status -->
+        <div class="card" id="analysis-status" style="display: none;">
+            <h2>📈 Analysis Status</h2>
+            <div id="status-content"></div>
+        </div>
+        
+        <!-- Top Recommendations -->
+        <div class="card" id="recommendations" style="display: none;">
+            <h2>🎯 Top Recommendations</h2>
+            <div id="recommendations-content"></div>
+        </div>
+        
+        <!-- User Directories -->
+        <div class="card" id="directories" style="display: none;">
+            <h2>📁 Folder Analysis</h2>
+            <div id="directories-content"></div>
+        </div>
+        
+        <!-- Large Files -->
+        <div class="card" id="large-files" style="display: none;">
+            <h2>📄 Large Files</h2>
+            <div id="large-files-content"></div>
+        </div>
+    </div>
+    
+    <script>
+        let currentReport = null;
+        // CSRF protection disabled for development tool
+        
+        function startAnalysis() {
+            document.getElementById('analysis-status').style.display = 'block';
+            document.getElementById('status-content').innerHTML = '<div class="status-message status-running">Starting analysis...</div>';
+            
+            fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({})  // Send empty object since we analyze all categories
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.results) {
+                    displayResults(data);
+                } else {
+                    document.getElementById('status-content').innerHTML = '<div class="status-message status-error">Error: ' + (data.error || 'Unknown error') + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('status-content').innerHTML = '<div class="status-message status-error">Error starting analysis</div>';
+            });
+        }
+        
+        function monitorAnalysis() {
+            const interval = setInterval(() => {
+                fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    updateAnalysisStatus(data);
+                    
+                    if (data.status === 'completed') {
+                        clearInterval(interval);
+                        currentReport = data.space_report;
+                        displayResults(data.space_report);
+                    } else if (data.status === 'error') {
+                        clearInterval(interval);
+                        document.getElementById('status-content').innerHTML = '<div class="status-message status-error">Error: ' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error monitoring analysis:', error);
+                    clearInterval(interval);
+                });
+            }, 1000);
+        }
+        
+        function updateAnalysisStatus(status) {
+            let statusClass = 'status-running';
+            if (status.status === 'completed') {
+                statusClass = 'status-completed';
+            } else if (status.status === 'error') {
+                statusClass = 'status-error';
+            }
+            
+            let html = '<div class="status-message ' + statusClass + '">';
+            html += '<strong>Status:</strong> ' + status.status.charAt(0).toUpperCase() + status.status.slice(1) + '<br>';
+            html += '<strong>Message:</strong> ' + (status.message || 'No message');
+            html += '</div>';
+            
+            if (status.status === 'analyzing') {
+                html += '<div class="progress-bar"><div class="progress-fill" style="width: ' + status.progress + '%"></div></div>';
+                html += '<p>Progress: ' + status.progress + '%</p>';
+            }
+            
+            document.getElementById('status-content').innerHTML = html;
+        }
+        
+        function displayResults(data) {
+            // Store the analysis data for use in modal dialogs
+            window.currentAnalysisData = data;
+            
+            // Display summary with disk usage visualization
+            const summary = data.summary;
+            let summaryHtml = '<div class="info-grid">';
+            summaryHtml += '<div class="info-item"><strong>Total Files</strong>' + summary.total_files.toLocaleString() + '</div>';
+            summaryHtml += '<div class="info-item"><strong>Total Size</strong>' + formatBytes(summary.total_size) + '</div>';
+            summaryHtml += '<div class="info-item"><strong>Categories</strong>' + summary.categories_analyzed + '</div>';
+            summaryHtml += '<div class="info-item"><strong>Status</strong>✅ Complete</div>';
+            summaryHtml += '</div>';
+            
+            // Add space usage bar
+            const usagePercent = Math.min((summary.total_size / (1024**10)) * 100, 100); // Assume 1TB as reference
+            summaryHtml += '<div class="space-bar">';
+            summaryHtml += '<div class="space-used" style="width: ' + usagePercent.toFixed(1) + '%">' + usagePercent.toFixed(1) + '% Used</div>';
+            summaryHtml += '<div class="space-free" style="width: ' + (100 - usagePercent).toFixed(1) + '%">' + (100 - usagePercent).toFixed(1) + '% Available</div>';
+            summaryHtml += '</div>';
+            
+            document.getElementById('disk-info').innerHTML = summaryHtml;
+            
+            // Display category results with more details
+            let resultsHtml = '';
+            for (const [category, result] of Object.entries(data.results)) {
+                if (result.error) {
+                    resultsHtml += '<div class="result-item" style="border-left: 4px solid #dc3545;">';
+                    resultsHtml += '<div><strong>' + category.charAt(0).toUpperCase() + category.replace('_', ' ') + '</strong><br>';
+                    resultsHtml += '<small style="color: #dc3545;">Error: ' + result.error + '</small></div>';
+                    resultsHtml += '<div style="text-align: right;"><strong>Failed</strong></div>';
+                    resultsHtml += '</div>';
+                } else {
+                    const size = result.total_size || 0;
+                    const count = result.file_count || 0;
+                    const sizeHuman = result.total_size_human || formatBytes(size);
+                    resultsHtml += '<div class="result-item" style="border-left: 4px solid #28a745;">';
+                    resultsHtml += '<div><strong>' + category.charAt(0).toUpperCase() + category.replace('_', ' ') + '</strong><br>';
+                    resultsHtml += '<small>' + count.toLocaleString() + ' files</small><br>';
+                    resultsHtml += '<small style="color: #666;">Click to view details</small></div>';
+                    resultsHtml += '<div style="text-align: right;"><strong>' + sizeHuman + '</strong><br>';
+                    resultsHtml += '<span style="color: #28a745;">✅ Analyzed</span><br>';
+                    if (result.details && result.details.length > 0) {
+                        resultsHtml += '<button class="button" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;" onclick="showCategoryDetails(\'' + category + '\')">📂 Details</button>';
+                    }
+                    resultsHtml += '</div>';
+                    resultsHtml += '</div>';
+                }
+            }
+            document.getElementById('recommendations-content').innerHTML = resultsHtml;
+            document.getElementById('recommendations').style.display = 'block';
+            
+            // Show directories section with available data
+            let dirHtml = '';
+            for (const [category, result] of Object.entries(data.results)) {
+                if (result.details && result.details.length > 0) {
+                    dirHtml += '<h4>' + category.charAt(0).toUpperCase() + category.replace('_', ' ') + ' Locations</h4>';
+                    for (const detail of result.details) {
+                        const safeColor = '#28a745'; // All analyzed paths are safe to view
+                        const safeText = '✅ Viewable';
+                        dirHtml += '<div class="result-item">';
+                        dirHtml += '<div><strong>' + detail.path + '</strong><br>';
+                        dirHtml += '<small style="color: #666;">Size: ' + (detail.size_human || formatBytes(detail.size)) + '</small></div>';
+                        dirHtml += '<div style="text-align: right;"><strong>' + (detail.size_human || formatBytes(detail.size)) + '</strong><br>';
+                        dirHtml += '<span style="color: ' + safeColor + ';">' + safeText + '</span><br>';
+                        dirHtml += '<button class="button" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;" onclick="openInFinder(\'' + detail.path.replace(/'/g, "\\'") + '\')">📂 Open in Finder</button>';
+                        dirHtml += '</div>';
+                        dirHtml += '</div>';
+                    }
+                }
+            }
+            
+            if (dirHtml) {
+                document.getElementById('directories-content').innerHTML = dirHtml;
+                document.getElementById('directories').style.display = 'block';
+            }
+            
+            // Show large files section
+            let fileHtml = '';
+            let allFiles = [];
+            
+            // Collect all files from all categories
+            for (const [category, result] of Object.entries(data.results)) {
+                if (result.details) {
+                    for (const detail of result.details) {
+                        allFiles.push({
+                            path: detail.path,
+                            size: detail.size,
+                            category: category
+                        });
+                    }
+                }
+            }
+            
+            // Sort by size and show top 10
+            allFiles.sort((a, b) => b.size - a.size);
+            const topFiles = allFiles.slice(0, 10);
+            
+            for (const file of topFiles) {
+                const filename = file.path.split('/').pop();
+                const dirname = file.path.substring(0, file.path.lastIndexOf('/'));
+                fileHtml += '<div class="result-item">';
+                fileHtml += '<div><strong>' + filename + '</strong><br>';
+                fileHtml += '<small style="color: #666;">' + dirname + '</small><br>';
+                fileHtml += '<small>Category: ' + file.category + '</small></div>';
+                fileHtml += '<div style="text-align: right;"><strong>' + formatBytes(file.size) + '</strong><br>';
+                fileHtml += '<button class="button" style="margin-top: 5px; padding: 5px 10px; font-size: 12px;" onclick="openInFinder(\'' + file.path.replace(/'/g, "\\'") + '\')">📂 Open in Finder</button>';
+                fileHtml += '</div>';
+                fileHtml += '</div>';
+            }
+            
+            if (fileHtml) {
+                document.getElementById('large-files-content').innerHTML = fileHtml;
+                document.getElementById('large-files').style.display = 'block';
+            }
+            
+            // Show completion message
+            document.getElementById('status-content').innerHTML = '<div class="status-message status-success">Analysis completed successfully! Found ' + summary.total_files.toLocaleString() + ' files totaling ' + formatBytes(summary.total_size) + '</div>';
+        }
+        
+        function showCategoryDetails(category) {
+            // Get the current analysis data from the last API call
+            const analysisData = window.currentAnalysisData;
+            
+            if (!analysisData || !analysisData.results || !analysisData.results[category]) {
+                alert('No detailed data available for ' + category);
+                return;
+            }
+            
+            const categoryData = analysisData.results[category];
+            const details = categoryData.details || [];
+            
+            if (details.length === 0) {
+                alert('No detailed locations found for ' + category);
+                return;
+            }
+            
+            // Create modal HTML
+            let modalHtml = `
+                <div id="detailModal" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0,0,0,0.5);
+                    z-index: 1000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                ">
+                    <div style="
+                        background: white;
+                        padding: 20px;
+                        border-radius: 12px;
+                        max-width: 800px;
+                        max-height: 80vh;
+                        overflow-y: auto;
+                        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                    ">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="margin: 0; color: #333;">📁 ${category.charAt(0).toUpperCase() + category.replace('_', ' ').slice(1)} Details</h2>
+                            <button onclick="closeDetailModal()" style="
+                                background: #dc3545;
+                                color: white;
+                                border: none;
+                                padding: 8px 16px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 16px;
+                            ">✕</button>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                <div>
+                                    <strong>Total Locations:</strong><br>
+                                    <span style="font-size: 18px; color: #007AFF;">${details.length}</span>
+                                </div>
+                                <div>
+                                    <strong>Total Size:</strong><br>
+                                    <span style="font-size: 18px; color: #007AFF;">${formatBytes(categoryData.total_size || 0)}</span>
+                                </div>
+                                <div>
+                                    <strong>Files:</strong><br>
+                                    <span style="font-size: 18px; color: #007AFF;">${(categoryData.file_count || 0).toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h3 style="color: #333; margin-bottom: 15px;">📍 Locations & Files</h3>
+                        <div style="max-height: 400px; overflow-y: auto;">
+            `;
+            
+            // Add each location with details
+            details.forEach((detail, index) => {
+                const sizeHuman = detail.size_human || formatBytes(detail.size || 0);
+                const safetyLevel = getSafetyLevel(detail.path, category);
+                const recommendation = getRecommendation(detail.path, category, detail.size || 0);
+                
+                modalHtml += `
+                    <div style="
+                        border: 1px solid #e9ecef;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-bottom: 15px;
+                        background: white;
+                    ">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 5px 0; color: #333;">📂 ${detail.path}</h4>
+                                <div style="display: flex; gap: 15px; margin-bottom: 8px;">
+                                    <span style="color: #666;">Size: <strong>${sizeHuman}</strong></span>
+                                    <span style="color: ${safetyLevel.color};">Safety: <strong>${safetyLevel.text}</strong></span>
+                                </div>
+                                <div style="color: #666; margin-bottom: 10px;">
+                                    Recommendation: <strong style="color: ${recommendation.color};">${recommendation.text}</strong>
+                                </div>
+                            </div>
+                            <button onclick="openInFinder('${detail.path.replace(/'/g, "\\'")}')" style="
+                                background: #007AFF;
+                                color: white;
+                                border: none;
+                                padding: 8px 12px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 12px;
+                            ">📂 Open</button>
+                        </div>
+                        
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 6px;">
+                            <strong>Analysis:</strong> ${getAnalysisDescription(detail.path, category, detail.size || 0)}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            // Add cleanup recommendations section
+            modalHtml += `
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196F3;">
+                            <h4 style="margin: 0 0 10px 0; color: #1976D2;">🧹 Cleanup Recommendations</h4>
+                            <ul style="margin: 0; padding-left: 20px; color: #333;">
+                                ${getCleanupRecommendations(category, details)}
+                            </ul>
+                        </div>
+                        
+                        <div style="margin-top: 20px; text-align: right;">
+                            <button onclick="closeDetailModal()" style="
+                                background: #6c757d;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                margin-right: 10px;
+                            ">Close</button>
+                            <button onclick="startCategoryCleanup('${category}')" style="
+                                background: #28a745;
+                                color: white;
+                                border: none;
+                                padding: 10px 20px;
+                                border-radius: 6px;
+                                cursor: pointer;
+                            ">🧹 Start Cleanup</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add modal to page
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = modalHtml;
+            document.body.appendChild(modalDiv);
+        }
+        
+        function closeDetailModal() {
+            const modal = document.getElementById('detailModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        function getSafetyLevel(path, category) {
+            // Determine safety level based on path and category
+            if (path.includes('/tmp/') || path.includes('/Temp/') || path.includes('/Caches/')) {
+                return { text: 'Safe', color: '#28a745' };
+            } else if (path.includes('/Library/Logs/') || path.includes('/Trash/')) {
+                return { text: 'Very Safe', color: '#17a2b8' };
+            } else if (path.includes('/System/')) {
+                return { text: 'Caution', color: '#ffc107' };
+            } else {
+                return { text: 'Review', color: '#6c757d' };
+            }
+        }
+        
+        function getRecommendation(path, category, size) {
+            if (path.includes('/tmp/') || path.includes('/Temp/')) {
+                return { text: 'Delete', color: '#28a745' };
+            } else if (path.includes('/Caches/')) {
+                return { text: 'Safe to Delete', color: '#28a745' };
+            } else if (path.includes('/Logs/')) {
+                return { text: 'Review Old Files', color: '#ffc107' };
+            } else if (path.includes('/Trash/')) {
+                return { text: 'Empty Trash', color: '#dc3545' };
+            } else {
+                return { text: 'Manual Review', color: '#6c757d' };
+            }
+        }
+        
+        function getAnalysisDescription(path, category, size) {
+            const sizeHuman = formatBytes(size);
+            if (category === 'browser_cache') {
+                return `Browser cache containing ${sizeHuman} of temporary web data. Safe to clear but may slow down initial page loads.`;
+            } else if (category === 'logs') {
+                return `System and application log files totaling ${sizeHuman}. Keep recent logs for troubleshooting.`;
+            } else if (category === 'temp_files') {
+                return `Temporary files using ${sizeHuman} of space. Generally safe to delete if not in use.`;
+            } else if (category === 'trash') {
+                return `Trash items consuming ${sizeHuman}. Review before permanently deleting.`;
+            } else if (category === 'system_cache') {
+                return `System cache files (${sizeHuman}). May impact performance if cleared recently.`;
+            } else {
+                return `${sizeHuman} of data in ${category}. Review contents before cleanup.`;
+            }
+        }
+        
+        function getCleanupRecommendations(category, details) {
+            const totalSize = details.reduce((sum, d) => sum + (d.size || 0), 0);
+            const sizeHuman = formatBytes(totalSize);
+            
+            if (category === 'browser_cache') {
+                return `<li>Clear browser cache to free up ${sizeHuman}</li>
+                        <li>Safe to remove - will rebuild as you browse</li>
+                        <li>May require re-login to some websites</li>`;
+            } else if (category === 'logs') {
+                return `<li>Review logs older than 30 days</li>
+                        <li>Keep recent logs for troubleshooting</li>
+                        <li>Compress old logs instead of deleting</li>`;
+            } else if (category === 'temp_files') {
+                return `<li>Delete files older than 7 days</li>
+                        <li>Safe to remove ${sizeHuman} of temp data</li>
+                        <li>Close applications before cleanup</li>`;
+            } else if (category === 'trash') {
+                return `<li>Review items before permanent deletion</li>
+                        <li>Empty trash to reclaim ${sizeHuman}</li>
+                        <li>Cannot be undone once emptied</li>`;
+            } else if (category === 'system_cache') {
+                return `<li>Use with caution - may affect performance</li>
+                        <li>Clear only if experiencing issues</li>
+                        <li>System will rebuild cache automatically</li>`;
+            } else {
+                return `<li>Review each location carefully</li>
+                        <li>Backup important data before cleanup</li>
+                        <li>Start with safest locations first</li>`;
+            }
+        }
+        
+        function startCategoryCleanup(category) {
+            closeDetailModal();
+            alert('Cleanup functionality for ' + category + ' would be implemented here with safety checks and progress tracking.');
+        }
+        
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        function openInFinder(path) {
+            fetch('/api/open_finder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    // 'X-CSRFToken': csrfToken // CSRF disabled
+                },
+                body: JSON.stringify({ path: path })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'ok') {
+                    alert('Error opening in Finder: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error opening in Finder');
+            });
+        }
+        
+        function refreshData() {
+            location.reload();
+        }
+        
+        // Auto-refresh status every 30 seconds
+        setInterval(() => {
+            fetch('/api/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'idle' && data.status !== 'completed') {
+                    updateAnalysisStatus(data);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking status:', error);
+            });
+        }, 30000);
+    </script>
+</body>
+</html>

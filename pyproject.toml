@@ -1,16 +1,35 @@
 [build-system]
-requires = ["setuptools>=65", "wheel"]
+requires = ["setuptools>=65", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "macos-cleaner"
 version = "0.1.0"
-description = "Safe and comprehensive macOS system cleaner"
+description = "Safe and comprehensive macOS disk analysis tool"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
-  {name = "macOS Cleaner contributors"}
+  {name = "macOS Cleaner contributors", email = "contributors@mac-cleaner.local"}
+]
+maintainers = [
+  {name = "macOS Cleaner contributors", email = "contributors@mac-cleaner.local"}
+]
+keywords = ["macos", "cleaner", "disk-space", "system-maintenance", "security"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: System :: Filesystems",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+    "Environment :: Console",
+    "Security",
 ]
 dependencies = [
   "psutil>=5.9.0",
@@ -18,14 +37,159 @@ dependencies = [
   "flask>=2.3.0",
   "flask-wtf>=1.1.1",
   "flask-limiter>=3.5.0",
-  "click>=8.1.0"
+  "click>=8.1.0",
+  "pyyaml>=6.0",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.0.0",
+    "mypy>=1.5.0",
+    "flake8>=6.0.0",
+    "bandit>=1.7.0",
+    "safety>=2.3.0",
+    "build>=0.10.0",
+    "twine>=4.0.0",
+]
+web = [
+    "gunicorn>=21.0.0",
+    "flask-cors>=4.0.0",
+]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "pytest-xdist>=3.3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mac-cleaner/macos-cleaner"
+Documentation = "https://github.com/mac-cleaner/macos-cleaner/blob/main/README.md"
+Repository = "https://github.com/mac-cleaner/macos-cleaner.git"
+"Bug Tracker" = "https://github.com/mac-cleaner/macos-cleaner/issues"
+Changelog = "https://github.com/mac-cleaner/macos-cleaner/blob/main/CHANGELOG.md"
 
 [project.scripts]
 mac-cleaner = "mac_cleaner.cli:main"
+mac-cleaner-web = "mac_cleaner.web.web_gui:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+mac_cleaner = ["*.yaml", "*.yml", "templates/*", "static/*"]
+
+# Black configuration
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+# mypy configuration
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_explicit_any = true
+
+[[tool.mypy.overrides]]
+module = [
+    "psutil.*",
+    "send2trash.*",
+    "flask.*",
+    "flask_wtf.*",
+    "flask_limiter.*",
+]
+ignore_missing_imports = true
+
+# pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src/mac_cleaner",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "security: marks tests as security-related",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["src/mac_cleaner"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# Bandit configuration
+[tool.bandit]
+exclude_dirs = ["tests", "build", "dist"]
+skips = ["B101", "B601"]

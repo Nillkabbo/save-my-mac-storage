@@ -39,64 +39,45 @@ pip install -r requirements.txt > /dev/null 2>&1
 # Menu
 echo ""
 echo "Choose your option:"
-echo "1) Launch GUI (Recommended)"
-echo "2) Launch Detailed Analysis GUI"
-echo "3) Launch Web GUI (Browser-based)"
-echo "4) Run Command Line Version"
-echo "5) Dry Run Only (CLI)"
-echo "6) Exit"
+echo "1) Launch Web GUI"
+echo "2) Run Command Line Version"
+echo "3) Dry Run Only (CLI)"
+echo "4) Exit"
 echo ""
 
-read -p "Enter your choice (1-6): " choice
+read -p "Enter your choice (1-4): " choice
 
 case $choice in
     1)
-        echo "🚀 Launching GUI..."
-        if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
-            mac-cleaner gui
-        else
-            python -m mac_cleaner.gui
-        fi
-        ;;
-    2)
-        echo "🔍 Launching Detailed Analysis GUI..."
-        if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
-            mac-cleaner detailed-gui
-        else
-            python -m mac_cleaner.detailed_gui
-        fi
-        ;;
-    3)
         echo "🌐 Launching Web GUI..."
-        echo "📋 Opening browser interface..."
         if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
             mac-cleaner web
         else
-            python -m mac_cleaner.web_gui
+            python -m mac_cleaner.web.web_gui
+        fi
+        ;;
+    2)
+        echo "🔍 Running Command Line Analysis..."
+        if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
+            mac-cleaner analyze
+        else
+            python -m mac_cleaner.cli analyze
+        fi
+        ;;
+    3)
+        echo "🔍 Running Dry Run Analysis..."
+        if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
+            mac-cleaner clean --dry-run
+        else
+            python -m mac_cleaner.cli clean --dry-run
         fi
         ;;
     4)
-        echo "🚀 Starting Command Line Cleaner..."
-        if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
-            mac-cleaner clean --no-dry-run --category all
-        else
-            python -m mac_cleaner.cli clean --no-dry-run --category all
-        fi
-        ;;
-    5)
-        echo "🔍 Running Dry Run Analysis..."
-        if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
-            mac-cleaner clean --dry-run --category all
-        else
-            python -m mac_cleaner.cli clean --dry-run --category all
-        fi
-        ;;
-    6)
         echo "👋 Goodbye!"
         exit 0
         ;;
     *)
-        echo "❌ Invalid choice. Please run the script again."
+        echo "❌ Invalid choice. Please try again."
         exit 1
         ;;
 esac

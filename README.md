@@ -2,7 +2,9 @@
 
 > **⚠️ IMPORTANT**: This tool operates in **read-only mode** and will **NEVER delete or modify** any files on your system. It only analyzes disk usage and provides insights.
 
-A safe, comprehensive macOS disk usage analysis tool that helps you understand what's consuming space on your Mac without any risk of data loss.
+A safe, comprehensive macOS disk usage analysis tool that helps you understand what's consuming space on your Mac with built-in safety features to prevent accidental data loss.
+
+A safe, comprehensive macOS disk usage analysis tool that helps you understand what's consuming space on your Mac with built-in safety features to prevent accidental data loss.
 
 ## ✨ Features
 
@@ -19,13 +21,18 @@ A safe, comprehensive macOS disk usage analysis tool that helps you understand w
 
 ### Installation
 
-1. Clone or download the project:
+📖 **For detailed installation instructions, see [INSTALLATION.md](docs/INSTALLATION.md)**
+
+**Quick Install:**
 ```bash
-git clone <repository-url>
-cd mac-cleaner
+# Navigate to project directory
+cd mack-clearn
+
+# Install in editable mode (recommended)
+pip install -e .
 ```
 
-2. Install dependencies:
+**Alternative:**
 ```bash
 pip install -r requirements.txt
 ```
@@ -67,179 +74,158 @@ mac-cleaner clean --dry-run --category all
 ## 🛡️ Safety Features
 
 ### Protected Paths
-The cleaner automatically protects critical system paths:
-- `/System`, `/usr`, `/bin`, `/sbin`
-- `/Applications`, `/Library/Preferences`
-- `/Library/Keychains`, user configuration files
-
-### Backup System
-- Automatic backup before deletion
-- Session-based backup organization
-- Easy restore functionality
-- Backup manifest with checksums
-
-### File Validation
-- Critical file detection
-- Recent modification warnings
-- Large file identification
-
-## 📊 GUI Features
-
-- **System Information Display**: Shows macOS version, memory, and disk space
-- **Space Analysis**: Detailed breakdown of cleanable space by category
-- **Interactive Controls**: Clean all or selected categories
-- **Dry Run Mode**: Preview deletions without actual removal
-- **Real-time Progress**: Visual feedback during cleaning operations
-- **Activity Log**: Scrollable log of all operations
-
-## 🔧 Advanced Usage
-
-### Command Line Options
-
 ```bash
-# Dry run (preview only)
-mac-cleaner clean --dry-run --category all
+./run_cleaner.sh
+# Interactive menu with all options
+```
 
-# Clean specific category
-mac-cleaner clean --no-dry-run --category cache
+## 📊 Usage Examples
+
+### Basic Analysis
+```bash
+# Get system information
+mac-cleaner info
 
 # Analyze disk usage
 mac-cleaner analyze
 
-# Show help
-mac-cleaner --help
+# Focus on specific categories
+mac-cleaner clean --dry-run --category cache
 ```
 
-### CLI Help (Excerpt)
-
-```text
-$ mac-cleaner --help
-Usage: mac-cleaner [OPTIONS] COMMAND [ARGS]...
-
-Options:
-  --version  Show the version and exit.
-  --help     Show this message and exit.
-
-Commands:
-  analyze
-  clean
-  detailed-gui
-  gui
-  web
-```
-
-### Backup Management
-
-```python
-from mac_cleaner.safety_manager import SafetyManager
-
-# Create safety manager instance
-safety = SafetyManager()
-
-# List all backups
-backups = safety.list_backups()
-
-# Restore from specific session
-safety.restore_backup('20231201_143022')
-
-# Clean old backups (older than 30 days)
-safety.cleanup_old_backups(days_to_keep=30)
-```
-
-## 📁 Project Structure
-
-```
-mac-cleaner/
-├── src/mac_cleaner/        # Package source
-├── gui_cleaner.py          # GUI interface
-├── detailed_gui.py         # Detailed analysis GUI
-├── web_gui.py              # Web interface
-├── requirements.txt        # Python dependencies
-├── README.md               # This file
-└── .mac_cleaner_backup/    # Backup directory (created automatically)
-```
-
-## ⚙️ Requirements
-
-- Python 3.7 or higher
-- macOS 10.14 or later
-- Administrative privileges (for system files)
-
-### Python Dependencies
-- `psutil` - System information and process management
-- `send2trash` - Safe file deletion to trash
-- `flask-wtf` - CSRF protection for web GUI
-- `flask-limiter` - Rate limiting for web GUI
-
-## 🔒 Security & Privacy
-
-- **No Data Collection**: The cleaner works entirely offline
-- **Local Processing**: All operations happen on your machine
-- **Transparent Operations**: Detailed logs of all actions
-- **Safe by Default**: Dry run mode enabled by default in GUI
-- **Security Policy**: See `SECURITY.md` for reporting vulnerabilities
-
-### Web Interface Notes
-- Runs on localhost only
-- Requires `MAC_CLEANER_SECRET_KEY` for CSRF protection
-- For production rate limits, set `MAC_CLEANER_LIMITER_STORAGE` (ex: `redis://localhost:6379`)
-
-### Environment Setup
-
-- Copy `.env.example` and set values for your environment
-
-## 🐛 Troubleshooting
-
-### Permission Issues
-If you encounter permission errors, try running with sudo:
+### Advanced Usage
 ```bash
-sudo mac-cleaner clean --no-dry-run --category all
+# JSON output for scripting
+mac-cleaner analyze --json
+
+# Use specific analysis plugin
+mac-cleaner clean --plugin "Browser Cache Cleaner"
+
+# Create backup before manual cleanup
+mac-cleaner backup --path "~/Downloads"
 ```
 
-### Large Files Not Deleting
-Some large files may be locked by applications. Close running applications and try again.
+## �️ Safety Features
 
-### Backup Restoration
-Backups are stored in `~/.mac_cleaner_backup/`. You can manually restore files if needed.
+- **Read-Only Operation**: No files are modified during analysis
+- **Safety Scoring**: Each file category gets a safety recommendation
+- **Protected Paths**: System directories are automatically excluded
+- **Backup Integration**: Optional backup before any manual actions
+- **Validation**: All paths are validated before processing
 
-## 📝 Changelog
+## � What Gets Analyzed
 
-### v1.0.0
-- Initial release
-- Core cleaning functionality
-- GUI interface
-- Safety and backup features
-- Comprehensive logging
+### User Directories
+- Desktop, Documents, Downloads, Movies, Music, Pictures
+- Library/Caches, Library/Logs, Library/Application Support
+- Library/Containers, Library/Group Containers
+
+### System Areas
+- System caches and temporary files
+- Application support directories
+- Development tool caches (Xcode, Docker, etc.)
+
+### File Categories
+- **Cache Files**: Browser caches, system caches, application caches
+- **Log Files**: Application logs, system logs, crash reports
+- **Temporary Files**: Build artifacts, downloads, installation files
+- **Large Files**: Files over 100MB with detailed information
+
+## 🔧 Configuration
+
+### Default Settings
+The tool works out-of-the-box with sensible defaults. Configuration files are stored in:
+- `~/.mac_cleaner/` - User configuration
+- `~/.mac_cleaner_backup/` - Backup directory
+
+### Custom Configuration
+```yaml
+# ~/.mac_cleaner/config.yaml
+analysis:
+  exclude_paths:
+    - "/Users/yourname/Important"
+    - "/Volumes/External"
+  
+plugins:
+  enabled:
+    - "Browser Cache Cleaner"
+    - "System Cache Cleaner"
+  
+safety:
+  auto_backup: true
+  protected_paths:
+    - "/System"
+    - "/Library"
+```
+
+## 📈 Sample Output
+
+```
+🍎 MACOS SPACE ANALYSIS REPORT
+================================================================================
+
+💾 DISK USAGE:
+   Total: 228.27 GB
+   Used:  190.31 GB (83.4%)
+   Free:  12.60 GB
+
+🎯 TOP RECOMMENDATIONS:
+   1. System Caches: 19.27 GB - Safe to clear
+   2. Library/Caches: 16.74 GB - Safe to clear  
+   3. Application Support: 30.81 GB - Review carefully
+   4. Downloads: 1.83 GB - Review old files
+
+📄 LARGE FILES (Top 10):
+   📄 408.18 MB - Screen Recording 2025-02-11.mov
+   📄 354.34 MB - Backup Migration.zip
+   📄 330.21 MB - MicrosoftEdge-114.0.1823.37.pkg
+```
+
+## 🧪 Development
+
+### Running Tests
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run with coverage
+pytest --cov=mac_cleaner
+```
+
+### Project Structure
+```
+src/mac_cleaner/
+├── cli.py              # Command-line interface
+├── space_analyzer.py   # Core analysis engine
+├── safety_manager.py   # Safety and backup features
+├── web/               # Web interface
+├── plugins/           # Analysis plugins
+└── core/              # Core functionality
+```
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Areas for Contribution
+- **New Analysis Plugins**: Add support for specific applications
+- **Web Interface**: Improve the browser-based UI
+- **Documentation**: Help improve guides and examples
+- **Testing**: Add more comprehensive test coverage
 
 ## 📄 License
 
-This project is licensed under the MIT License - see `LICENSE` for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🔖 Versioning
+## � Security
 
-- Version is defined in `src/mac_cleaner/__version__.py`
-- Update `CHANGELOG.md` for every release
-- CLI version: `mac-cleaner --version`
-
-## ✅ Release Checklist
-
-- [ ] All tests pass (`pytest`)
-- [ ] Update `CHANGELOG.md`
-- [ ] Bump `src/mac_cleaner/__version__.py`
-- [ ] Verify CLI/GUI/Web basic flows
-- [ ] Tag the release
-
-## ⚠️ Disclaimer
-
-This software modifies your filesystem. While built with safety features, always:
+- **No data collection**: No information is sent to external servers
+- **Local operation**: All analysis happens on your machine
+- **Open source**: Full code transparency
+- **Safety first**: Read-only operation prevents accidental data loss
 - Review dry run results before cleaning
 - Keep important backups
 - Use at your own risk

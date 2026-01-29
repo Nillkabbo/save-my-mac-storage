@@ -354,7 +354,7 @@
             
             let html = '<div class="status-message ' + statusClass + '">';
             html += '<strong>Status:</strong> ' + status.status.charAt(0).toUpperCase() + status.status.slice(1) + '<br>';
-            html += '<strong>Message:</strong> ' + status.message;
+            html += '<strong>Message:</strong> ' + (status.message || 'No message');
             html += '</div>';
             
             if (status.status === 'analyzing') {

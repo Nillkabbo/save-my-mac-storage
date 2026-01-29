@@ -23,7 +23,7 @@ from mac_cleaner.mac_cleaner import MacCleaner
 class MacCleanerGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("🍎 macOS Cleaner")
+        self.root.title("macOS Cleaner - Read-Only Analysis Mode")
         self.root.geometry("800x600")
         self.root.configure(bg="#f0f0f0")
 
@@ -112,7 +112,7 @@ class MacCleanerGUI:
 
         self.clean_all_button = ttk.Button(
             control_frame,
-            text="🧹 Clean All",
+            text="📊 Analyze All",
             command=self.start_cleaning_all,
             state="disabled",
         )
@@ -120,15 +120,15 @@ class MacCleanerGUI:
 
         self.clean_selected_button = ttk.Button(
             control_frame,
-            text="🎯 Clean Selected",
+            text="🎯 Analyze Selected",
             command=self.start_cleaning_selected,
             state="disabled",
         )
         self.clean_selected_button.grid(row=0, column=1, padx=(0, 10))
 
         self.dry_run_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            control_frame, text="Dry Run (Preview)", variable=self.dry_run_var
+        ttk.Label(
+            control_frame, text="🔒 Read-Only Mode", foreground="gray"
         ).grid(row=0, column=2, padx=(0, 10))
 
         self.progress = ttk.Progressbar(control_frame, mode="indeterminate")
@@ -263,7 +263,7 @@ class MacCleanerGUI:
         if result:
             self.update_queue.put(("disable_buttons", None))
             self.update_queue.put(("progress_start", None))
-            self.update_queue.put(("status", "Cleaning..."))
+            self.update_queue.put(("status", "Analyzing..."))
 
             thread = threading.Thread(target=self.clean_all, daemon=True)
             thread.start()
@@ -279,10 +279,10 @@ class MacCleanerGUI:
 
             self.update_queue.put(("log", f"\n=== {mode_text} RESULTS ===\n"))
             self.update_queue.put(
-                ("log", f"Files processed: {results['total_files']}\n")
+                ("log", f"Files identified: {results['total_files']}\n")
             )
             self.update_queue.put(
-                ("log", f"Space freed: {results['total_space_human']}\n")
+                ("log", f"Potential savings: {results['total_space_human']}\n")
             )
 
             if self.cleaner.stats["errors"]:
