@@ -28,7 +28,7 @@ This installs the application in editable mode, allowing you to make changes tha
 
 ```bash
 # Clone or navigate to the project directory
-cd /path/to/windsurf-project
+cd /path/to/save-my-mac-storage
 
 # Install in editable mode
 pip install -e .
@@ -43,7 +43,7 @@ pip install -e .
 
 ```bash
 # Navigate to the project directory
-cd /path/to/windsurf-project
+cd /path/to/save-my-mac-storage
 
 # Install dependencies
 pip install -r requirements.txt
