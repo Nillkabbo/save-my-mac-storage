@@ -12,6 +12,7 @@ import sys
 import json
 import threading
 import time
+import argparse
 from pathlib import Path
 import subprocess
 from datetime import datetime
@@ -242,6 +243,11 @@ def create_templates():
 
 def main():
     """Main function to run the web GUI"""
+    parser = argparse.ArgumentParser(description='macOS Cleaner Web Interface')
+    parser.add_argument('--host', default='127.0.0.1', help='Host to bind to')
+    parser.add_argument('--port', type=int, default=5000, help='Port to bind to')
+    args = parser.parse_args()
+    
     print("🌐 Starting macOS Cleaner Web Interface...")
 
     # Create templates directory
@@ -252,17 +258,23 @@ def main():
         print("❌ Failed to initialize cleaner")
         return 1
 
-    # Find available port
-    port = 5000
-    while port < 5010:
+    # Try to use specified port, find alternative if needed
+    port = args.port
+    host = args.host
+    
+    while port < args.port + 10:  # Try 10 ports
         try:
-            app.run(host="127.0.0.1", port=port, debug=False)
+            print(f"🚀 Web interface available at: http://{host}:{port}")
+            print("📋 Open this URL in your browser to use the cleaner")
+            app.run(host=host, port=port, debug=False)
             break
-        except OSError:
-            port += 1
-
-    print(f"🚀 Web interface available at: http://127.0.0.1:{port}")
-    print("📋 Open this URL in your browser to use the cleaner")
+        except OSError as e:
+            if "Address already in use" in str(e):
+                print(f"Port {port} is in use, trying {port + 1}...")
+                port += 1
+            else:
+                print(f"Error starting server: {e}")
+                return 1
 
     return 0
 

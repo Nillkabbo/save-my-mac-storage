@@ -1,19 +1,19 @@
-# 🍎 macOS Cleaner
+# 🍎 macOS Cleaner - Read-Only Disk Analysis Tool
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](CHANGELOG.md)
+> **⚠️ IMPORTANT**: This tool operates in **read-only mode** and will **NEVER delete or modify** any files on your system. It only analyzes disk usage and provides insights.
 
-A comprehensive and safe system cleaning tool for macOS that helps you reclaim disk space by removing unnecessary files, caches, logs, and temporary data.
+A safe, comprehensive macOS disk usage analysis tool that helps you understand what's consuming space on your Mac without any risk of data loss.
 
 ## ✨ Features
 
-- **Safe Cleaning**: Built-in safety mechanisms to protect critical system files
-- **Automatic Backup**: Creates backups before deletion with easy restore functionality
-- **Multiple Interfaces**: Both command-line and GUI versions available
-- **Comprehensive Analysis**: Detailed space analysis before cleaning
-- **Selective Cleaning**: Choose what to clean or clean everything at once
-- **Dry Run Mode**: Preview what would be deleted without actually deleting
-- **Activity Logging**: Complete logs of all cleaning activities
-- **macOS Focused**: Built specifically for modern macOS versions
+- **🔍 Read-Only Analysis**: Analyzes disk usage without any risk of data loss
+- **📊 Comprehensive Analysis**: Detailed space analysis with file-level insights
+- **🎯 Plugin System**: Modular analysis with specific plugins (Browser, System, Development, etc.)
+- **📋 Multiple Interfaces**: CLI, GUI, and Web interfaces
+- **📈 Detailed Reports**: JSON output and comprehensive logging
+- **🔒 Security Focused**: Built-in path validation and safety checks
+- **⚙️ Configurable**: YAML-based configuration system
+- **🧪 Well Tested**: Comprehensive test coverage
 
 ## 🚀 Quick Start
 

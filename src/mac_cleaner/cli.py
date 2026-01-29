@@ -11,54 +11,100 @@ import sys
 import subprocess
 import click
 from pathlib import Path
+from typing import Optional
+
 from mac_cleaner.__version__ import __version__
 from mac_cleaner.mac_cleaner import MacCleaner
 from mac_cleaner.space_analyzer import SpaceAnalyzer
+from mac_cleaner.safety_manager import SafetyManager
 from mac_cleaner.categories import CATEGORY_MAP, CATEGORY_CHOICES
 from mac_cleaner.security import sanitize_shell_input
+from mac_cleaner.interfaces import PluginManager
+from mac_cleaner.plugins import register_builtin_plugins
 
 
 @click.group()
 @click.version_option(__version__)
-def main():
-    """macOS Cleaner - safe system cleaning tool."""
+@click.option('--config', type=click.Path(exists=True), help='Configuration file path')
+@click.pass_context
+def main(ctx, config):
+    """macOS Cleaner - Safe disk usage analysis tool (read-only)."""
+    ctx.ensure_object(dict)
+    ctx.obj['config'] = config
 
 
 @main.command()
-@click.option("--dry-run/--no-dry-run", default=True, help="Preview without deleting")
+@click.option('--dry-run/--no-dry-run', default=True, help='Preview without deleting')
 @click.option(
-    "--category",
-    default="all",
+    '--category',
+    default='all',
     show_default=True,
-    help=f"Category to clean ({', '.join(CATEGORY_CHOICES)})",
+    help=f'Category to clean ({", ".join(CATEGORY_CHOICES)})',
     type=click.Choice(CATEGORY_CHOICES, case_sensitive=False),
 )
-@click.option("--json", "output_json", is_flag=True, help="Output results as JSON")
-@click.option("--force", is_flag=True, help="Skip confirmation prompts")
-@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def clean(dry_run, category, output_json, force, verbose):
-    """Clean system files."""
+@click.option('--json', 'output_json', is_flag=True, help='Output results as JSON')
+@click.option('--force', is_flag=True, help='Skip confirmation prompts')
+@click.option('--verbose', '-v', is_flag=True, help='Verbose output')
+@click.option('--plugin', help='Use specific plugin instead of category')
+@click.pass_context
+def clean(ctx, dry_run, category, output_json, force, verbose, plugin):
+    """Analyze system files and directories (read-only mode)."""
     cleaner = MacCleaner()
 
     if not output_json:
-        click.echo("🍎 macOS Cleaner")
-        click.echo(f"Mode: {'DRY RUN' if dry_run else 'LIVE CLEANING'}")
+        click.echo('🔍 macOS Cleaner - Read-Only Analysis Mode')
+        click.echo('⚠️  This tool analyzes disk usage but does NOT delete any files')
+        click.echo(f'Mode: {"ANALYSIS" if dry_run else "ANALYSIS (live cleaning disabled)"}')
 
-    # Add confirmation for live cleaning
+    # No confirmation needed for read-only analysis
     if not dry_run and not force:
-        if not click.confirm(f"⚠️  This will permanently delete files in category '{category}'. Continue?"):
-            click.echo("Operation cancelled.")
-            sys.exit(0)
+        click.echo('ℹ️  Live cleaning is disabled - running in analysis mode only')
+        dry_run = True
 
-    if category == "all":
+    if plugin:
+        # Use plugin-based cleaning
+        plugin_manager = register_builtin_plugins(PluginManager())
+        selected_plugin = plugin_manager.get_plugin(plugin)
+        
+        if not selected_plugin:
+            click.echo(f'Plugin "{plugin}" not found.', err=True)
+            available_plugins = [p.name for p in plugin_manager.get_all_plugins()]
+            click.echo(f'Available plugins: {", ".join(available_plugins)}')
+            sys.exit(1)
+        
+        if output_json:
+            results = selected_plugin.clean_paths(dry_run=dry_run)
+            click.echo(json.dumps(results, indent=2))
+        else:
+            if verbose:
+                click.echo(f'Using plugin: {selected_plugin.name}')
+                click.echo(f'Description: {selected_plugin.description}')
+            
+            results = selected_plugin.clean_paths(dry_run=dry_run)
+            
+            click.echo(f'Paths analyzed: {len(results["analyzed"])}')
+            click.echo(f'Space analyzed: {results["total_analyzed_human"]}')
+            
+            if results["skipped"]:
+                click.echo(f'Skipped: {len(results["skipped"])} items')
+            
+            if results["errors"]:
+                click.echo(f'Errors: {len(results["errors"])} items')
+                if verbose:
+                    for error in results["errors"]:
+                        click.echo(f'  - {error["path"]}: {error["error"]}')
+        
+        sys.exit(0)
+
+    if category == 'all':
         if output_json:
             results = cleaner.clean_all(dry_run=dry_run)
             click.echo(json.dumps(results, indent=2))
         else:
-            with click.progressbar(length=100, label="Cleaning") as bar:
+            with click.progressbar(length=100, label='Cleaning') as bar:
                 results = cleaner.clean_all(dry_run=dry_run, progress=bar.update)
-            click.echo(f"Files processed: {results['total_files']}")
-            click.echo(f"Space freed: {results['total_space_human']}")
+            click.echo(f'Files processed: {results["total_files"]}')
+            click.echo(f'Space freed: {results["total_space_human"]}')
         sys.exit(0)
 
     mapped = CATEGORY_MAP.get(category, [])
@@ -76,10 +122,10 @@ def clean(dry_run, category, output_json, force, verbose):
             category_results.append(result)
     else:
         # Interactive mode - show progress bars
-        with click.progressbar(length=len(mapped), label="Cleaning categories") as bar:
+        with click.progressbar(length=len(mapped), label='Cleaning categories') as bar:
             for i, mapped_category in enumerate(mapped):
                 if verbose:
-                    click.echo(f"\nProcessing: {mapped_category}")
+                    click.echo(f'\nProcessing: {mapped_category}')
                 result = cleaner.clean_category(mapped_category, dry_run=dry_run)
                 total_files += result.get("files_deleted", 0)
                 total_space += result.get("space_freed", 0)
@@ -96,15 +142,49 @@ def clean(dry_run, category, output_json, force, verbose):
         }
         click.echo(json.dumps(payload, indent=2))
     else:
-        click.echo(f"Files processed: {total_files}")
-        click.echo(f"Space freed: {cleaner.format_bytes(total_space)}")
+        click.echo(f'Files processed: {total_files}')
+        click.echo(f'Space freed: {cleaner.format_bytes(total_space)}')
     sys.exit(0)
 
 
 @main.command()
-@click.option("--json", "output_json", is_flag=True, help="Output report as JSON")
-def analyze(output_json):
+@click.option('--json', 'output_json', is_flag=True, help='Output report as JSON')
+@click.option('--plugin', help='Analyze specific plugin')
+def analyze(output_json, plugin):
     """Analyze disk usage."""
+    
+    if plugin:
+        # Plugin-based analysis
+        plugin_manager = register_builtin_plugins(PluginManager())
+        selected_plugin = plugin_manager.get_plugin(plugin)
+        
+        if not selected_plugin:
+            click.echo(f'Plugin "{plugin}" not found.', err=True)
+            available_plugins = [p.name for p in plugin_manager.get_all_plugins()]
+            click.echo(f'Available plugins: {", ".join(available_plugins)}')
+            sys.exit(1)
+        
+        results = selected_plugin.analyze_paths()
+        
+        if output_json:
+            click.echo(json.dumps(results, indent=2))
+        else:
+            click.echo(f'Plugin Analysis: {selected_plugin.name}')
+            click.echo(f'Description: {selected_plugin.description}')
+            click.echo(f'Category: {selected_plugin.category}')
+            click.echo(f'Total paths: {len(results["paths"])}')
+            click.echo(f'Total files: {results.get("file_count", 0)}')
+            click.echo(f'Total size: {results.get("total_size_human", "0 B")}')
+            click.echo(f'Safe to clean: {"Yes" if results.get("safe_to_clean", True) else "No"}')
+            
+            for path_info in results["paths"]:
+                safety_icon = "✅" if path_info["safe"] else "⚠️"
+                click.echo(f'  {safety_icon} {path_info["path"]}')
+                click.echo(f'     Size: {path_info["size_human"]}, Files: {path_info["file_count"]}')
+        
+        sys.exit(0)
+    
+    # Standard analysis
     analyzer = SpaceAnalyzer()
     report = analyzer.generate_report()
 
@@ -117,52 +197,219 @@ def analyze(output_json):
 
 
 @main.command()
+@click.option('--json', 'output_json', is_flag=True, help='Output list as JSON')
+def plugins(output_json):
+    """List available plugins."""
+    plugin_manager = register_builtin_plugins(PluginManager())
+    
+    if output_json:
+        plugin_info = []
+        for plugin in plugin_manager.get_all_plugins():
+            plugin_info.append({
+                "name": plugin.name,
+                "category": plugin.category,
+                "description": plugin.description
+            })
+        click.echo(json.dumps(plugin_info, indent=2))
+    else:
+        click.echo('Available Plugins:')
+        click.echo()
+        
+        for category in plugin_manager.get_categories():
+            click.echo(f'{category.upper()}:')
+            for plugin in plugin_manager.get_plugins_by_category(category):
+                click.echo(f'  • {plugin.name}')
+                click.echo(f'    {plugin.description}')
+            click.echo()
+    
+    sys.exit(0)
+
+
+@main.command()
+@click.option('--path', required=True, help='Path to backup')
+@click.option('--json', 'output_json', is_flag=True, help='Output result as JSON')
+def backup(path, output_json):
+    """Create backup of specified path."""
+    safety_manager = SafetyManager()
+    
+    try:
+        success = safety_manager.create_backup(path)
+        
+        if output_json:
+            click.echo(json.dumps({
+                "success": success,
+                "path": path,
+                "backup_path": safety_manager.backup_dir / Path(path).name
+            }, indent=2))
+        else:
+            if success:
+                click.echo(f'✅ Backup created successfully')
+                click.echo(f'Path: {path}')
+                click.echo(f'Backup location: {safety_manager.backup_dir / Path(path).name}')
+            else:
+                click.echo(f'❌ Backup failed for path: {path}', err=True)
+                sys.exit(1)
+    
+    except Exception as e:
+        if output_json:
+            click.echo(json.dumps({
+                "success": False,
+                "path": path,
+                "error": str(e)
+            }, indent=2))
+        else:
+            click.echo(f'❌ Error creating backup: {e}', err=True)
+            sys.exit(1)
+    
+    sys.exit(0)
+
+
+@main.command()
+@click.option('--list-backups', 'list_backups', is_flag=True, help='List available backups')
+@click.option('--restore', help='Restore specific backup')
+@click.option('--json', 'output_json', is_flag=True, help='Output result as JSON')
+def restore(list_backups, restore, output_json):
+    """Manage and restore backups."""
+    safety_manager = SafetyManager()
+    
+    if list_backups:
+        backups = safety_manager.list_backups()
+        
+        if output_json:
+            click.echo(json.dumps(backups, indent=2, default=str))
+        else:
+            if not backups:
+                click.echo('No backups found.')
+                sys.exit(0)
+            
+            click.echo('Available Backups:')
+            for backup in backups:
+                size_str = safety_manager.format_bytes(backup["total_size"]) if hasattr(safety_manager, "format_bytes") else f"{backup['total_size']} bytes"
+                click.echo(f'  • Session {backup["session_id"]}')
+                click.echo(f'    Created: {backup["timestamp"]}')
+                click.echo(f'    Size: {size_str}')
+                click.echo(f'    Files: {len(backup["files"])}')
+                for file_info in backup["files"]:
+                    click.echo(f'      - {file_info["original_path"]}')
+                click.echo()
+        
+        sys.exit(0)
+    
+    if restore:
+        try:
+            success = safety_manager.restore_backup(restore)
+            
+            if output_json:
+                click.echo(json.dumps({
+                    "success": success,
+                    "backup": restore
+                }, indent=2))
+            else:
+                if success:
+                    click.echo(f'✅ Backup restored successfully: {restore}')
+                else:
+                    click.echo(f'❌ Failed to restore backup: {restore}', err=True)
+                    sys.exit(1)
+        
+        except Exception as e:
+            if output_json:
+                click.echo(json.dumps({
+                    "success": False,
+                    "backup": restore,
+                    "error": str(e)
+                }, indent=2))
+            else:
+                click.echo(f'❌ Error restoring backup: {e}', err=True)
+                sys.exit(1)
+        
+        sys.exit(0)
+    
+    # No options specified, show help
+    click.echo('Use --list-backups to see available backups or --restore <backup_name> to restore.')
+    sys.exit(0)
+
+
+@main.command()
 def gui():
     """Launch Tkinter GUI."""
     try:
         # Validate the subprocess call
-        cmd = [sys.executable, "-m", "mac_cleaner.gui"]
+        cmd = [sys.executable, '-m', 'mac_cleaner.gui']
         sanitized_cmd = [sanitize_shell_input(str(arg)) for arg in cmd]
         subprocess.run(sanitized_cmd, check=True)
     except subprocess.CalledProcessError as e:
-        click.echo(f"Error launching GUI: {e}", err=True)
+        click.echo(f'Error launching GUI: {e}', err=True)
         sys.exit(1)
     except Exception as e:
-        click.echo(f"Unexpected error: {e}", err=True)
+        click.echo(f'Unexpected error: {e}', err=True)
         sys.exit(1)
 
 
-@main.command(name="detailed-gui")
+@main.command(name='detailed-gui')
 def detailed_gui():
     """Launch detailed analysis GUI."""
     try:
         # Validate the subprocess call
-        cmd = [sys.executable, "-m", "mac_cleaner.detailed_gui"]
+        cmd = [sys.executable, '-m', 'mac_cleaner.detailed_gui']
         sanitized_cmd = [sanitize_shell_input(str(arg)) for arg in cmd]
         subprocess.run(sanitized_cmd, check=True)
     except subprocess.CalledProcessError as e:
-        click.echo(f"Error launching detailed GUI: {e}", err=True)
+        click.echo(f'Error launching detailed GUI: {e}', err=True)
         sys.exit(1)
     except Exception as e:
-        click.echo(f"Unexpected error: {e}", err=True)
+        click.echo(f'Unexpected error: {e}', err=True)
         sys.exit(1)
 
 
 @main.command()
-def web():
+@click.option('--host', default='127.0.0.1', help='Web server host')
+@click.option('--port', default=5000, help='Web server port')
+def web(host, port):
     """Launch web interface."""
     try:
         # Validate the subprocess call
-        cmd = [sys.executable, "-m", "mac_cleaner.web_gui"]
+        cmd = [sys.executable, '-m', 'mac_cleaner.web_gui', '--host', host, '--port', str(port)]
         sanitized_cmd = [sanitize_shell_input(str(arg)) for arg in cmd]
         subprocess.run(sanitized_cmd, check=True)
     except subprocess.CalledProcessError as e:
-        click.echo(f"Error launching web interface: {e}", err=True)
+        click.echo(f'Error launching web interface: {e}', err=True)
         sys.exit(1)
     except Exception as e:
-        click.echo(f"Unexpected error: {e}", err=True)
+        click.echo(f'Unexpected error: {e}', err=True)
         sys.exit(1)
 
 
-if __name__ == "__main__":
+@main.command()
+@click.option('--json', 'output_json', is_flag=True, help='Output info as JSON')
+def info(output_json):
+    """Show system information."""
+    cleaner = MacCleaner()
+    
+    try:
+        system_info = cleaner.get_system_info()
+        
+        if output_json:
+            click.echo(json.dumps(system_info, indent=2, default=str))
+        else:
+            click.echo('System Information:')
+            click.echo(f'  macOS Version: {system_info.get("macos_version", "Unknown")}')
+            click.echo(f'  Python Version: {system_info.get("python_version", "Unknown")}')
+            click.echo(f'  Total Disk Space: {system_info.get("total_space_human", "Unknown")}')
+            click.echo(f'  Used Disk Space: {system_info.get("used_space_human", "Unknown")}')
+            click.echo(f'  Free Disk Space: {system_info.get("free_space_human", "Unknown")}')
+            click.echo(f'  Disk Usage: {system_info.get("disk_usage_percent", "Unknown")}%')
+    
+    except Exception as e:
+        if output_json:
+            click.echo(json.dumps({
+                "error": str(e)
+            }, indent=2))
+        else:
+            click.echo(f'Error getting system info: {e}', err=True)
+            sys.exit(1)
+    
+    sys.exit(0)
+
+
+if __name__ == '__main__':
     main()

@@ -42,12 +42,33 @@ class MacCleaner:
         self.logger = logging.getLogger(__name__)
 
     def get_system_info(self) -> Dict:
+        """Get comprehensive system information."""
+        import platform
+        
+        # Disk usage
+        disk_usage = psutil.disk_usage("/")
+        total_space = disk_usage.total
+        used_space = disk_usage.used
+        free_space = disk_usage.free
+        usage_percent = (used_space / total_space) * 100
+        
+        # Memory info
+        memory = psutil.virtual_memory()
+        
         return {
             "platform": platform.system(),
-            "release": platform.mac_ver()[0],
+            "macos_version": platform.mac_ver()[0],
+            "python_version": platform.python_version(),
             "processor": platform.processor(),
-            "total_memory": psutil.virtual_memory().total,
-            "disk_usage": psutil.disk_usage("/").total,
+            "total_memory": memory.total,
+            "total_memory_human": self.format_bytes(memory.total),
+            "total_space": total_space,
+            "total_space_human": self.format_bytes(total_space),
+            "used_space": used_space,
+            "used_space_human": self.format_bytes(used_space),
+            "free_space": free_space,
+            "free_space_human": self.format_bytes(free_space),
+            "disk_usage_percent": round(usage_percent, 1),
         }
 
     def get_cleanable_paths(self) -> Dict[str, List[str]]:
@@ -128,57 +149,83 @@ class MacCleaner:
             bytes_size /= 1024.0
         return f"{bytes_size:.2f} PB"
 
-    def clean_directory(self, path: str, dry_run: bool = True) -> Tuple[int, int]:
-        files_deleted = 0
-        space_freed = 0
+    def clean_category(self, category: str, dry_run: bool = True, progress=None) -> Dict:
+        """Clean a specific category (READ-ONLY MODE - Analysis Only)"""
+        self.logger.info(f"🔍 ANALYZING category: {category} (read-only mode)")
+        
+        if not dry_run:
+            self.logger.warning("⚠️  Live cleaning is disabled - running in analysis mode only")
+            dry_run = True
+        
+        paths = self.cleanable_paths.get(category, [])
+        if not paths:
+            return {"files_deleted": 0, "space_freed": 0, "space_freed_human": "0 B", "error": "Category not found"}
+        
+        total_files = 0
+        total_size = 0
+        results = []
+        
+        for path in paths:
+            if progress:
+                progress()
+            
+            try:
+                path_obj = Path(path)
+                if not path_obj.exists():
+                    continue
+                
+                # Only analyze, never delete
+                size = self._get_directory_size(path_obj)
+                file_count = self._count_files(path_obj)
+                
+                total_files += file_count
+                total_size += size
+                
+                results.append({
+                    "path": path,
+                    "size": size,
+                    "size_human": self.format_bytes(size),
+                    "files_found": file_count,
+                    "action": "analyzed_only"
+                })
+                
+                self.logger.info(f"📊 Analyzed {path}: {file_count} files, {self.format_bytes(size)}")
+                
+            except Exception as e:
+                self.logger.error(f"Error analyzing {path}: {e}")
+                results.append({"path": path, "error": str(e)})
+        
+        return {
+            "category": category,
+            "files_deleted": 0,  # Never delete files
+            "space_freed": 0,   # Never free space
+            "space_freed_human": "0 B",
+            "files_analyzed": total_files,
+            "space_analyzed": total_size,
+            "space_analyzed_human": self.format_bytes(total_size),
+            "paths_analyzed": results,
+            "mode": "read_only_analysis"
+        }
 
-        if not os.path.exists(path):
-            return files_deleted, space_freed
-
-        try:
-            for item in os.listdir(path):
-                item_path = os.path.join(path, item)
+    def _get_directory_size(self, path: Path) -> int:
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(path):
+            for filename in filenames:
+                filepath = os.path.join(dirpath, filename)
                 try:
-                    if os.path.isfile(item_path):
-                        file_size = os.path.getsize(item_path)
-                        if not dry_run:
-                            send2trash(item_path)
-                        files_deleted += 1
-                        space_freed += file_size
-                        self.logger.info(
-                            f"{'[DRY RUN] ' if dry_run else ''}Deleted file: {item_path}"
-                        )
-                    elif os.path.isdir(item_path):
-                        dir_size = self.get_directory_size(item_path)
-                        if not dry_run:
-                            send2trash(item_path)
-                        files_deleted += 1
-                        space_freed += dir_size
-                        self.logger.info(
-                            f"{'[DRY RUN] ' if dry_run else ''}Deleted directory: {item_path}"
-                        )
-                except (OSError, PermissionError) as e:
-                    self.stats["errors"].append(f"Error deleting {item_path}: {str(e)}")
-        except (OSError, PermissionError) as e:
-            self.stats["errors"].append(f"Error accessing {path}: {str(e)}")
-        return files_deleted, space_freed
-
-    def clean_category(self, category: str, dry_run: bool = True) -> Dict:
-        if category not in self.cleanable_paths:
-            return {"error": f"Unknown category: {category}"}
-
-        result = {"files_deleted": 0, "space_freed": 0, "paths_cleaned": []}
-
-        for path in self.cleanable_paths[category]:
-            if os.path.exists(path):
-                files, space = self.clean_directory(path, dry_run)
-                result["files_deleted"] += files
-                result["space_freed"] += space
-                result["paths_cleaned"].append(path)
-
-        return result
+                    total_size += os.path.getsize(filepath)
+                except (OSError, PermissionError):
+                    continue
+        return total_size
 
     def clean_all(self, dry_run: bool = True) -> Dict:
+        """Clean all categories (READ-ONLY MODE - Analysis Only)"""
+        self.logger.info("🔍 ANALYZING all categories (read-only mode)")
+        
+        if not dry_run:
+            self.logger.warning("⚠️  Live cleaning is disabled - running in analysis mode only")
+            dry_run = True
+        
         results = {}
         total_files = 0
         total_space = 0
@@ -186,14 +233,18 @@ class MacCleaner:
         for category in self.cleanable_paths.keys():
             result = self.clean_category(category, dry_run)
             results[category] = result
-            total_files += result.get("files_deleted", 0)
-            total_space += result.get("space_freed", 0)
+            total_files += result.get("files_analyzed", 0)
+            total_space += result.get("space_analyzed", 0)
 
         return {
             "categories": results,
-            "total_files": total_files,
-            "total_space": total_space,
-            "total_space_human": self.format_bytes(total_space),
+            "total_files": 0,  # Never delete files
+            "total_space": 0,   # Never free space
+            "total_space_human": "0 B",
+            "files_analyzed": total_files,
+            "space_analyzed": total_space,
+            "space_analyzed_human": self.format_bytes(total_space),
+            "mode": "read_only_analysis"
         }
 
 
