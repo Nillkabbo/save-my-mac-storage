@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Shared category mapping for macOS Cleaner interfaces.
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 CATEGORY_MAP = {

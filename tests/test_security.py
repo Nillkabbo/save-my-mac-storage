@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""
+Tests for security functions.
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
+"""
+
 import os
 from pathlib import Path
 

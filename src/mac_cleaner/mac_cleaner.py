@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 macOS Cleaner - A comprehensive system cleaning tool for macOS
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 import os

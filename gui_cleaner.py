@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 macOS Cleaner GUI - Modern Tkinter interface for the macOS cleaner
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 import tkinter as tk

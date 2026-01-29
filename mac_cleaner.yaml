@@ -1,0 +1,45 @@
+# macOS Cleaner Configuration File
+# This file controls the behavior of the macOS Cleaner application
+
+# Security settings
+security:
+  require_confirmation: true          # Require confirmation before deleting files
+  allow_system_paths: false           # Allow cleaning of system paths (dangerous)
+  max_file_size_mb: 1000              # Maximum file size to process (in MB)
+  protected_paths:                    # Paths that should never be touched
+    - "/System"
+    - "/usr/bin"
+    - "/Library/Keychains"
+    - "/etc"
+    - "/var/root"
+
+# Backup settings
+backup:
+  enabled: true                       # Enable automatic backups
+  backup_dir: "~/.mac_cleaner_backup" # Directory for backups
+  max_backup_age_days: 30             # Maximum age for backup files
+  auto_cleanup: true                  # Automatically clean old backups
+
+# Web interface settings
+web:
+  host: "127.0.0.1"                  # Web server host
+  port: 5000                          # Web server port
+  secret_key: null                    # Secret key for sessions (set via env var)
+  csrf_enabled: true                  # Enable CSRF protection
+  rate_limit: "100 per hour"          # Rate limiting for API
+
+# Logging settings
+logging:
+  level: "INFO"                       # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  log_file: null                      # Log file path (null for stdout only)
+  max_log_size_mb: 10                 # Maximum log file size
+  backup_count: 5                     # Number of log files to keep
+
+# Cleaner settings
+dry_run_default: true                 # Default to dry-run mode
+categories_enabled:                   # Categories to enable by default
+  - "cache"
+  - "temp"
+  - "logs"
+  - "trash"
+  - "browser_cache"

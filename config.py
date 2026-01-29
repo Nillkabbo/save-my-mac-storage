@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Shared configuration defaults for macOS Cleaner.
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 from pathlib import Path

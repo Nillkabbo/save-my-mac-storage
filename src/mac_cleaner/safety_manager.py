@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Safety Manager for macOS Cleaner - Provides backup and safety features
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 import os

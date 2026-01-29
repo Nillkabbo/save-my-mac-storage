@@ -2,6 +2,9 @@
 """
 Web-based GUI for macOS Cleaner
 Provides a browser-based interface when tkinter is not available
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 import os

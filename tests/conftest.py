@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""
+Pytest configuration and fixtures.
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
+"""
+
 import sys
 from pathlib import Path
 

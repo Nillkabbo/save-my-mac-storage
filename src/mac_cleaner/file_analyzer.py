@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 File Analyzer - Detailed file analysis with importance scoring and Finder integration
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 import os

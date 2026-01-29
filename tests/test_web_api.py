@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+"""
+Tests for web API interface.
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
+"""
+
 from web_gui import app
 
 

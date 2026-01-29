@@ -2,6 +2,9 @@
 """
 Space Analyzer - Shows what's taking up space and what's safe to delete
 Focuses on providing actionable recommendations with exact folder locations
+
+Copyright (c) 2026 macOS Cleaner contributors
+Licensed under the MIT License
 """
 
 import os
