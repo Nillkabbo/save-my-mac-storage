@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "macos-cleaner"
+version = "0.1.0"
+description = "Safe and comprehensive macOS system cleaner"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+  {name = "macOS Cleaner contributors"}
+]
+dependencies = [
+  "psutil>=5.9.0",
+  "send2trash>=1.8.2",
+  "flask>=2.3.0",
+  "flask-wtf>=1.1.1",
+  "flask-limiter>=3.5.0",
+  "click>=8.1.0"
+]
+
+[project.scripts]
+mac-cleaner = "mac_cleaner.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

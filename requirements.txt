@@ -1,0 +1,6 @@
+psutil>=5.9.0
+send2trash>=1.8.2
+flask>=2.3.0
+flask-wtf>=1.1.1
+flask-limiter>=3.5.0
+click>=8.1.0
