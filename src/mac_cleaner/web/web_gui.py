@@ -150,13 +150,19 @@ def api_analyze():
             total_size += data.get("total_size", 0)
             total_files += len(data.get("details", []))
         
+        # Use the correct method to generate a comprehensive report
+        report = space_analyzer.generate_report()
+        
         return jsonify({
+            "success": True,
             "results": results,
-            "summary": {
-                "total_size": total_size,
-                "total_files": total_files,
-                "categories_analyzed": len(results),
-            },
+            "space_analyzed": total_size,
+            "space_analyzed_human": space_analyzer.format_bytes(total_size),
+            "files_analyzed": total_files,
+            "disk_usage": report.get("disk_usage", {}),
+            "user_directories": report.get("user_directories", {}),
+            "top_recommendations": report.get("top_recommendations", []),
+            "large_files": report.get("large_files", []),
             "timestamp": datetime.now().isoformat(),
         })
     except Exception as e:
@@ -231,7 +237,7 @@ def api_open_finder():
         subprocess.run(["open", "-R", safe_path], check=True)
         
         return jsonify({
-            "status": "ok",
+            "success": True,
             "message": f"Opened {safe_path} in Finder",
             "path": safe_path,
         })

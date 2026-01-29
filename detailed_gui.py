@@ -47,10 +47,10 @@ class DetailedCleanerGUI:
         style.theme_use("clam")
 
         style.configure(
-            "Title.TLabel", font=("SF Pro Display", 16, "bold"), background="#f0f0f0"
+            "Title.TLabel", font=("SF Pro Display", 18, "bold"), background="#f0f0f0", foreground="#0072ff"
         )
         style.configure(
-            "Heading.TLabel", font=("SF Pro Text", 12, "bold"), background="#f0f0f0"
+            "Heading.TLabel", font=("SF Pro Text", 13, "bold"), background="#f0f0f0"
         )
         style.configure("Info.TLabel", font=("SF Pro Text", 10), background="#f0f0f0")
         style.configure(
@@ -143,18 +143,18 @@ class DetailedCleanerGUI:
 
         ttk.Button(
             quick_frame,
-            text="📁 Caches",
+            text="Caches",
             command=lambda: self.select_quick_dir("cache"),
         ).grid(row=0, column=0, padx=(0, 5))
         ttk.Button(
-            quick_frame, text="📝 Logs", command=lambda: self.select_quick_dir("logs")
+            quick_frame, text="Logs", command=lambda: self.select_quick_dir("logs")
         ).grid(row=0, column=1, padx=(0, 5))
         ttk.Button(
-            quick_frame, text="🗑️ Trash", command=lambda: self.select_quick_dir("trash")
+            quick_frame, text="Trash", command=lambda: self.select_quick_dir("trash")
         ).grid(row=0, column=2, padx=(0, 5))
         ttk.Button(
             quick_frame,
-            text="🌐 Browser Cache",
+            text="Browser Cache",
             command=lambda: self.select_quick_dir("browser"),
         ).grid(row=0, column=3, padx=(0, 5))
 
@@ -255,14 +255,14 @@ class DetailedCleanerGUI:
         # Action buttons
         ttk.Button(
             control_frame,
-            text="📊 Show Top Space Consumers",
+            text="Top Space Consumers",
             command=self.show_top_consumers,
         ).grid(row=1, column=0, padx=(0, 10))
         ttk.Button(
-            control_frame, text="📅 Show Old Files", command=self.show_old_files
+            control_frame, text="Old Files", command=self.show_old_files
         ).grid(row=1, column=1, padx=(0, 10))
         ttk.Button(
-            control_frame, text="💾 Export Analysis", command=self.export_analysis
+            control_frame, text="Export Analysis", command=self.export_analysis
         ).grid(row=1, column=2, padx=(0, 10))
         self.clean_button = ttk.Button(
             control_frame,

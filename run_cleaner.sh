@@ -18,10 +18,15 @@ if [ ! -f "pyproject.toml" ]; then
     exit 1
 fi
 
-if command -v mac-cleaner >/dev/null 2>&1; then
-    CLEANER_CMD="mac-cleaner"
+# Check if we are running from the venv
+if [[ "$VIRTUAL_ENV" != "" ]] || [ -f "venv/bin/activate" ]; then
+    CLEANER_CMD="python3 -m mac_cleaner.cli"
 else
-    CLEANER_CMD="python -m mac_cleaner.cli"
+    if command -v mac-cleaner >/dev/null 2>&1; then
+        CLEANER_CMD="mac-cleaner"
+    else
+        CLEANER_CMD="python3 -m mac_cleaner.cli"
+    fi
 fi
 
 # Install dependencies if needed
@@ -33,15 +38,15 @@ fi
 echo "🔧 Activating virtual environment..."
 source venv/bin/activate
 
-echo "📦 Installing dependencies..."
-pip install -r requirements.txt > /dev/null 2>&1
+echo "📦 Installing dependencies and package..."
+pip install -e . > /dev/null 2>&1
 
 # Menu
 echo ""
 echo "Choose your option:"
-echo "1) Launch Web GUI"
-echo "2) Run Command Line Version"
-echo "3) Dry Run Only (CLI)"
+echo "1) Launch Web GUI (Analysis)"
+echo "2) Run Command Line Analysis"
+echo "3) Dry Run Analysis (CLI)"
 echo "4) Exit"
 echo ""
 
@@ -66,11 +71,7 @@ case $choice in
         ;;
     3)
         echo "🔍 Running Dry Run Analysis..."
-        if [ "$CLEANER_CMD" = "mac-cleaner" ]; then
-            mac-cleaner clean --dry-run
-        else
-            python -m mac_cleaner.cli clean --dry-run
-        fi
+        python3 -m mac_cleaner.cli analyze --dry-run
         ;;
     4)
         echo "👋 Goodbye!"

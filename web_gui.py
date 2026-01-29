@@ -60,7 +60,7 @@ def dirname_filter(path):
 cleaner = None
 safety_manager = None
 space_analyzer = None
-cleaning_status = {"status": "idle", "progress": 0, "message": "", "results": {}}
+cleaning_status = {"status": "idle", "progress": 0, "message": "", "results": {}, "mode": "analysis_only"}
 
 
 def initialize_cleaner():
@@ -109,7 +109,7 @@ def api_analyze():
                 cleaning_status["status"] = "completed"
                 cleaning_status["progress"] = 100
                 cleaning_status["message"] = "Analysis complete!"
-                cleaning_status["space_report"] = space_report
+                cleaning_status["results"] = space_report  # Keep keys for frontend compatibility
 
             except Exception as e:
                 cleaning_status["status"] = "error"
@@ -188,7 +188,7 @@ def api_clean():
 
                 for i, category in enumerate(categories):
                     cleaning_status["progress"] = int((i / total_steps) * 100)
-                    cleaning_status["message"] = f"Cleaning {category}..."
+                    cleaning_status["message"] = f"Analyzing {category}..."
 
                     mapped = CATEGORY_MAP.get(category, [])
                     if not mapped:
@@ -204,7 +204,7 @@ def api_clean():
 
                 cleaning_status["status"] = "completed"
                 cleaning_status["progress"] = 100
-                cleaning_status["message"] = "Cleaning completed!"
+                cleaning_status["message"] = "Analysis complete! (Read-Only)"
                 cleaning_status["results"] = results
 
             except Exception as e:

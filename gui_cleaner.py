@@ -112,15 +112,16 @@ class MacCleanerGUI:
 
         self.clean_all_button = ttk.Button(
             control_frame,
-            text="📊 Analyze All",
+            text="Scan All Categories",
             command=self.start_cleaning_all,
             state="disabled",
+            style="Primary.TButton"
         )
         self.clean_all_button.grid(row=0, column=0, padx=(0, 10))
 
         self.clean_selected_button = ttk.Button(
             control_frame,
-            text="🎯 Analyze Selected",
+            text="Scan Selected",
             command=self.start_cleaning_selected,
             state="disabled",
         )
@@ -136,8 +137,8 @@ class MacCleanerGUI:
             row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0)
         )
 
-        self.status_label = ttk.Label(control_frame, text="Ready", style="Info.TLabel")
-        self.status_label.grid(row=2, column=0, columnspan=3, pady=(5, 0))
+        self.status_label = ttk.Label(control_frame, text="Ready for system scan", style="Info.TLabel")
+        self.status_label.grid(row=2, column=0, columnspan=3, pady=(15, 0))
 
     def create_log_section(self, parent):
         log_frame = ttk.LabelFrame(parent, text="Activity Log", padding="10")
@@ -188,7 +189,7 @@ class MacCleanerGUI:
                     self.clean_selected_button.config(state="disabled")
 
         except queue.Empty:
-            pass
+            pass # Removed incorrect style configuration from here
 
         self.root.after(100, self.check_queue)
 
