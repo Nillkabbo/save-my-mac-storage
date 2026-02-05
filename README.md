@@ -25,7 +25,7 @@ A professional, comprehensive macOS disk usage analysis tool that helps you unde
 **Quick Install:**
 ```bash
 # Navigate to project directory
-cd mac-clean
+cd save-my-mac-storage
 
 # Install in editable mode (recommended)
 pip install -e .
